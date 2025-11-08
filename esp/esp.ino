@@ -12,6 +12,19 @@
 #include "soc/soc.h"
 #include "soc/rtc_cntl_reg.h"
 #include "quirc.h"
+#include <WiFi.h>
+#include <HTTPClient.h>
+/* ======================================== */
+
+/* ======================================== WiFi credentials */
+const char* ssid = "INTERNET";
+const char* password = "123456789";
+const char* serverUrl = "http://192.168.1.2:3000/api/asistencia/registrar"; // Cambia la IP a la de tu servidor
+const char* dispositivo_codigo = "ESP001"; // Código único del dispositivo
+/* ======================================== */
+
+/* ======================================== LED Pin */
+#define LED_PIN 4  // GPIO 4 - LED Flash del ESP32-CAM
 /* ======================================== */
 
 TaskHandle_t QRCodeReader_Task; 
@@ -182,7 +195,7 @@ void setup() {
   config.pixel_format = PIXFORMAT_GRAYSCALE;
   config.frame_size = FRAMESIZE_QVGA;
   config.jpeg_quality = 15;
-  config.fb_count = 2; // << CAMBIO: De 1 a 2 para doble búfer
+  config.fb_count = 1;
   
   #if defined(CAMERA_MODEL_ESP_EYE)
     pinMode(13, INPUT_PULLUP);
@@ -199,11 +212,40 @@ void setup() {
   // Configuración inicial de QVGA ya hecha en config.
   
   // << CAMBIOS: Ajustar sensor para mejor contraste y brillo
-  s->set_brightness(s, 1);     // -2 a 2
+  // s->set_brightness(s, 1);     // -2 a 2
   s->set_contrast(s, 1);       // -2 a 2
-  s->set_saturation(s, -2);    // -2 a 2 (Menos color ayuda a escala de grises)
+  s->set_framesize(s, FRAMESIZE_QVGA);
   
   Serial.println("Configure and initialize the camera successfully.");
+  Serial.println();
+  /* ---------------------------------------- */
+
+  /* ---------------------------------------- LED configuration */
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW); // Asegurar que el LED esté apagado al inicio
+  Serial.println("LED configured on GPIO 4");
+  /* ---------------------------------------- */
+
+  /* ---------------------------------------- WiFi connection */
+  Serial.println("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  
+  int attempts = 0;
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+  
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println();
+    Serial.println("WiFi connected successfully!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println();
+    Serial.println("WiFi connection failed. Continuing without network...");
+  }
   Serial.println();
   /* ---------------------------------------- */
 
@@ -305,6 +347,67 @@ void QRCodeReader( void * pvParameters ){
 }
 /* ________________________________________________________________________________ */
 
+/* ________________________________________________________________________________ Function to send QR payload to server via POST */
+void sendQRToServer(const char* payload) {
+  if (WiFi.status() == WL_CONNECTED) {
+    HTTPClient http;
+    
+    http.begin(serverUrl);
+    http.addHeader("Content-Type", "application/json");
+    
+    // Crear JSON con el payload y dispositivo_codigo
+    String jsonData = "{\"payload\":\"" + String(payload) + "\",\"dispositivo_codigo\":\"" + String(dispositivo_codigo) + "\"}";
+    
+    Serial.println("Sending POST request to server...");
+    Serial.println("JSON: " + jsonData);
+    
+    int httpResponseCode = http.POST(jsonData);
+    
+    if (httpResponseCode > 0) {
+      String response = http.getString();
+      Serial.printf("HTTP Response code: %d\n", httpResponseCode);
+      Serial.println("Response: " + response);
+      
+      // Si el POST fue exitoso (código 200-299), no hacer nada con el LED
+      if (httpResponseCode >= 200 && httpResponseCode < 300) {
+        Serial.println("Asistencia registrada exitosamente - OK");
+      } else {
+        // Si hubo error, parpadear LED 2 veces
+        Serial.println("Error en registro - LED parpadeando");
+        for (int i = 0; i < 2; i++) {
+          digitalWrite(LED_PIN, HIGH);
+          delay(200);
+          digitalWrite(LED_PIN, LOW);
+          delay(200);
+        }
+      }
+    } else {
+      Serial.printf("Error on sending POST: %d\n", httpResponseCode);
+      // Parpadear LED 2 veces en caso de error
+      Serial.println("Error de conexión - LED parpadeando");
+      for (int i = 0; i < 2; i++) {
+        digitalWrite(LED_PIN, HIGH);
+        delay(200);
+        digitalWrite(LED_PIN, LOW);
+        delay(200);
+      }
+    }
+    
+    http.end();
+  } else {
+    Serial.println("WiFi not connected. Cannot send data.");
+    // Parpadear LED 2 veces si no hay WiFi
+    Serial.println("Sin WiFi - LED parpadeando");
+    for (int i = 0; i < 2; i++) {
+      digitalWrite(LED_PIN, HIGH);
+      delay(200);
+      digitalWrite(LED_PIN, LOW);
+      delay(200);
+    }
+  }
+}
+/* ________________________________________________________________________________ */
+
 /* ________________________________________________________________________________ Function to display the results of reading the QR Code on the serial monitor. */
 void dumpData(const struct quirc_data *data)
 {
@@ -315,6 +418,18 @@ void dumpData(const struct quirc_data *data)
   Serial.printf("Payload: %s\n", data->payload);
   
   QRCodeResult = (const char *)data->payload;
+  
+  // Encender LED brevemente para indicar QR detectado
+  digitalWrite(LED_PIN, HIGH);
+  Serial.println("LED encendido - QR detectado");
+  delay(500);  // Mantener encendido 0.5 segundos
+  
+  // Apagar LED antes de enviar
+  digitalWrite(LED_PIN, LOW);
+  Serial.println("LED apagado - Enviando datos...");
+  
+  // Enviar el payload al servidor
+  sendQRToServer((const char *)data->payload);
 }
 /* ________________________________________________________________________________ */
 //<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<
