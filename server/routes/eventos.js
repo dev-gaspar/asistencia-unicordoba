@@ -10,9 +10,9 @@ router.use(verificarToken);
 // Crear evento
 router.post('/', async (req, res) => {
   try {
-    const { nombre, descripcion, fecha, hora_inicio, hora_fin, lugar, imagen_url, dispositivo } = req.body;
+    const { nombre, descripcion, fecha, hora_inicio, hora_fin, lugar, imagen_url, dispositivo, periodo, activo, finalizado } = req.body;
 
-    if (!nombre || !fecha || !hora_inicio || !hora_fin || !lugar || !dispositivo) {
+    if (!nombre || !fecha || !hora_inicio || !hora_fin || !lugar || !dispositivo || !periodo) {
       return res.status(400).json({ 
         success: false, 
         message: 'Todos los campos obligatorios son requeridos' 
@@ -36,7 +36,10 @@ router.post('/', async (req, res) => {
       hora_fin,
       lugar,
       imagen_url,
-      dispositivo
+      dispositivo,
+      periodo,
+      activo,
+      finalizado
     });
 
     await evento.save();
