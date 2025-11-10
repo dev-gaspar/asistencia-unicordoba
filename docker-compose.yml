@@ -47,12 +47,12 @@ services:
         condition: service_healthy
     networks:
       - asistencia-network
-    healthcheck:
-      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    # healthcheck:
+    #   test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 3
+    #   start_period: 40s
     logging:
       driver: "json-file"
       options:
@@ -71,8 +71,7 @@ services:
     ports:
       - "8081:80"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - asistencia-network
     logging:
