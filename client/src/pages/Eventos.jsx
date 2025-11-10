@@ -65,8 +65,7 @@ const Eventos = () => {
       hora_inicio: (value) => (!value ? 'Hora de inicio es requerida' : null),
       hora_fin: (value) => (!value ? 'Hora de fin es requerida' : null),
       lugar: (value) => (!value ? 'Lugar es requerido' : null),
-      dispositivo: (value) => (!value ? 'Dispositivo es requerido' : null),
-      periodo: (value) => (!value ? 'Periodo es requerido' : null)
+      dispositivo: (value) => (!value ? 'Dispositivo es requerido' : null)
     }
   })
 
