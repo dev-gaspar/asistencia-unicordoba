@@ -172,6 +172,11 @@ const EventoDetalle = () => {
                   )}
                 </div>
                 <Group gap="xs">
+                  {evento.periodo && (
+                    <Badge color="blue" size="md" variant="filled">
+                      Periodo: {evento.periodo}
+                    </Badge>
+                  )}
                   <Badge color={evento.activo ? 'green' : 'gray'} size="md">
                     {evento.activo ? 'Activo' : 'Inactivo'}
                   </Badge>

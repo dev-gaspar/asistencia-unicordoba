@@ -46,9 +46,10 @@ router.post('/registrar', async (req, res) => {
       });
     }
 
-    // Buscar estudiante por código de carnet
+    // Buscar estudiante por código de carnet del mismo periodo del evento
     const estudiante = await Estudiante.findOne({ 
       codigo_carnet: payload.toUpperCase(),
+      periodo: evento.periodo,
       activo: true
     });
     

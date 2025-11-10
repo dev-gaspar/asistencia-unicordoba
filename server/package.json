@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "sync": "node scripts/syncStudents.js"
+    "sync": "node scripts/syncStudents.js",
+    "migrar-periodos": "node scripts/migrarPeriodos.js",
+    "migrar-periodos-eventos": "node scripts/migrarPeriodosEventos.js"
   },
   "keywords": [
     "express",

@@ -14,13 +14,11 @@ const estudianteSchema = new mongoose.Schema({
   identificacion: {
     type: String,
     required: true,
-    unique: true,
     trim: true
   },
   codigo_carnet: {
     type: String,
     required: true,
-    unique: true,
     uppercase: true,
     trim: true
   },
@@ -55,6 +53,12 @@ const estudianteSchema = new mongoose.Schema({
     trim: true,
     default: ''
   },
+  periodo: {
+    type: String,
+    required: true,
+    trim: true,
+    // Formato: "2025-II", "2026-I"
+  },
   activo: {
     type: Boolean,
     default: true
@@ -63,7 +67,9 @@ const estudianteSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Índice para búsqueda rápida por código de carnet
-estudianteSchema.index({ codigo_carnet: 1 });
+// Índice compuesto único por código de carnet y periodo
+estudianteSchema.index({ codigo_carnet: 1, periodo: 1 }, { unique: true });
+// Índice compuesto único por identificación y periodo
+estudianteSchema.index({ identificacion: 1, periodo: 1 }, { unique: true });
 
 module.exports = mongoose.model('Estudiante', estudianteSchema);

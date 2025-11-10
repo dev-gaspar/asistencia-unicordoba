@@ -21,6 +21,27 @@ async function syncStudents() {
       process.exit(1);
     }
 
+    // Solicitar periodo
+    const readline = require('readline');
+    const rl = readline.createInterface({
+      input: process.stdin,
+      output: process.stdout
+    });
+
+    const periodo = await new Promise((resolve) => {
+      rl.question('Ingresa el periodo académico (ej: 2025-I, 2025-II): ', (answer) => {
+        rl.close();
+        resolve(answer.trim());
+      });
+    });
+
+    if (!periodo) {
+      console.error('❌ El periodo es requerido');
+      process.exit(1);
+    }
+
+    console.log(`📅 Sincronizando para el periodo: ${periodo}\n`);
+
     const estudiantes = [];
     let lineCount = 0;
     let errorCount = 0;
@@ -51,6 +72,7 @@ async function syncStudents() {
                 programa: row.programa ? row.programa.trim() : '',
                 sem: row.sem ? row.sem.trim() : '',
                 circunscripcion: row.circunscripcion ? row.circunscripcion.trim() : '',
+                periodo: periodo,
                 activo: true
               });
             } else {
@@ -82,7 +104,10 @@ async function syncStudents() {
 
     const bulkOps = estudiantes.map(estudiante => ({
       updateOne: {
-        filter: { codigo_carnet: estudiante.codigo_carnet },
+        filter: { 
+          codigo_carnet: estudiante.codigo_carnet,
+          periodo: estudiante.periodo
+        },
         update: { $set: estudiante },
         upsert: true
       }

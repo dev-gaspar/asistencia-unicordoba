@@ -36,6 +36,12 @@ const eventoSchema = new mongoose.Schema({
     ref: 'Dispositivo',
     required: true
   },
+  periodo: {
+    type: String,
+    required: true,
+    trim: true,
+    // Formato: "2025-II", "2026-I"
+  },
   activo: {
     type: Boolean,
     default: true

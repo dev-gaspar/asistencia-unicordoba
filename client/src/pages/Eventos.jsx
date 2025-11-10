@@ -19,7 +19,8 @@ import {
   Center,
   Image,
   FileButton,
-  ScrollArea
+  ScrollArea,
+  NumberInput
 } from '@mantine/core'
 import { DatePickerInput, TimeInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
@@ -27,18 +28,21 @@ import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconEdit, IconTrash, IconEye, IconUpload, IconDownload } from '@tabler/icons-react'
-import { eventosService, dispositivosService, uploadService, asistenciaService } from '../services/api'
+import { eventosService, dispositivosService, uploadService, asistenciaService, estudiantesService } from '../services/api'
 import dayjs from 'dayjs'
 
 const Eventos = () => {
   const [eventos, setEventos] = useState([])
   const [dispositivos, setDispositivos] = useState([])
+  const [periodos, setPeriodos] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false)
   const [editingEvento, setEditingEvento] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageFile, setImageFile] = useState(null)
   const [exportandoEventoId, setExportandoEventoId] = useState(null)
+  const [anioEvento, setAnioEvento] = useState(new Date().getFullYear())
+  const [semestreEvento, setSemestreEvento] = useState('I')
   const navigate = useNavigate()
 
   const form = useForm({
@@ -51,6 +55,7 @@ const Eventos = () => {
       lugar: '',
       imagen_url: '',
       dispositivo: '',
+      periodo: '',
       activo: true,
       finalizado: false
     },
@@ -60,13 +65,15 @@ const Eventos = () => {
       hora_inicio: (value) => (!value ? 'Hora de inicio es requerida' : null),
       hora_fin: (value) => (!value ? 'Hora de fin es requerida' : null),
       lugar: (value) => (!value ? 'Lugar es requerido' : null),
-      dispositivo: (value) => (!value ? 'Dispositivo es requerido' : null)
+      dispositivo: (value) => (!value ? 'Dispositivo es requerido' : null),
+      periodo: (value) => (!value ? 'Periodo es requerido' : null)
     }
   })
 
   useEffect(() => {
     loadEventos()
     loadDispositivos()
+    loadPeriodos()
   }, [])
 
   const loadEventos = async () => {
@@ -91,6 +98,15 @@ const Eventos = () => {
       setDispositivos(data.dispositivos || [])
     } catch (error) {
       console.error('Error loading dispositivos:', error)
+    }
+  }
+
+  const loadPeriodos = async () => {
+    try {
+      const data = await estudiantesService.getPeriodos()
+      setPeriodos(data.periodos || [])
+    } catch (error) {
+      console.error('Error loading periodos:', error)
     }
   }
 
@@ -119,6 +135,12 @@ const Eventos = () => {
   const handleOpenModal = (evento = null) => {
     if (evento) {
       setEditingEvento(evento)
+      // Extraer año y semestre del periodo
+      if (evento.periodo) {
+        const [anio, sem] = evento.periodo.split('-')
+        setAnioEvento(parseInt(anio))
+        setSemestreEvento(sem)
+      }
       form.setValues({
         nombre: evento.nombre,
         descripcion: evento.descripcion || '',
@@ -127,6 +149,7 @@ const Eventos = () => {
         hora_fin: evento.hora_fin,
         lugar: evento.lugar,
         imagen_url: evento.imagen_url || '',
+        periodo: evento.periodo || '',
         dispositivo: evento.dispositivo._id || evento.dispositivo,
         activo: evento.activo,
         finalizado: evento.finalizado
@@ -136,12 +159,18 @@ const Eventos = () => {
       setEditingEvento(null)
       form.reset()
       setImageFile(null)
+      setAnioEvento(new Date().getFullYear())
+      setSemestreEvento('I')
     }
     openModal()
   }
 
   const handleSubmit = async (values) => {
     try {
+      // Construir el periodo
+      const periodo = `${anioEvento}-${semestreEvento}`
+      values.periodo = periodo
+      
       if (editingEvento) {
         await eventosService.update(editingEvento._id, values)
         notifications.show({
@@ -272,6 +301,7 @@ const Eventos = () => {
                 <Table.Th style={{ minWidth: 140 }}>Fecha y Hora</Table.Th>
                 <Table.Th style={{ minWidth: 150 }}>Lugar</Table.Th>
                 <Table.Th style={{ minWidth: 120 }}>Dispositivo</Table.Th>
+                <Table.Th style={{ minWidth: 100 }}>Periodo</Table.Th>
                 <Table.Th style={{ minWidth: 110 }}>Estado</Table.Th>
                 <Table.Th style={{ minWidth: 160 }}>Acciones</Table.Th>
               </Table.Tr>
@@ -299,6 +329,11 @@ const Eventos = () => {
                   <Table.Td>
                     <Badge variant="light" color="grape" size="sm">
                       {evento.dispositivo?.codigo}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge variant="light" color="blue" size="sm">
+                      {evento.periodo || 'N/A'}
                     </Badge>
                   </Table.Td>
                   <Table.Td>
@@ -409,6 +444,37 @@ const Eventos = () => {
               {...form.getInputProps('lugar')}
               required
             />
+
+            <div>
+              <Text size="sm" fw={500} mb="xs">
+                Periodo Académico
+              </Text>
+              <Group grow>
+                <NumberInput
+                  label="Año"
+                  placeholder="2025"
+                  value={anioEvento}
+                  onChange={setAnioEvento}
+                  min={2020}
+                  max={2050}
+                  required
+                />
+                <Select
+                  label="Semestre"
+                  placeholder="Selecciona"
+                  data={[
+                    { value: 'I', label: 'I - Primer Semestre' },
+                    { value: 'II', label: 'II - Segundo Semestre' }
+                  ]}
+                  value={semestreEvento}
+                  onChange={setSemestreEvento}
+                  required
+                />
+              </Group>
+              <Badge size="md" variant="light" color="blue" mt="xs">
+                Periodo: {anioEvento}-{semestreEvento}
+              </Badge>
+            </div>
 
             <Select
               label="Dispositivo"

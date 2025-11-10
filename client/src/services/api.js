@@ -46,9 +46,28 @@ export const usuariosService = {
 
 // Estudiantes Service
 export const estudiantesService = {
-  getAll: (params) => api.get('/estudiantes', { params }),
+  getAll: (params = {}) => api.get('/estudiantes', { params }),
   getById: (id) => api.get(`/estudiantes/${id}`),
   getByCodigo: (codigo) => api.get(`/estudiantes/codigo/${codigo}`),
+  getPeriodos: () => api.get('/estudiantes/periodos'),
+  descargarPlantilla: async () => {
+    const response = await axios.get(`${API_URL}/estudiantes/plantilla/descargar`, {
+      responseType: 'blob',
+      headers: {
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    return response.data
+  },
+  sincronizar: async (formData) => {
+    const response = await axios.post(`${API_URL}/estudiantes/sincronizar`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+        Authorization: `Bearer ${localStorage.getItem('token')}`
+      }
+    })
+    return response.data
+  },
   update: (id, data) => api.put(`/estudiantes/${id}`, data)
 }
 
