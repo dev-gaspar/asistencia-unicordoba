@@ -10,7 +10,8 @@ import {
   Card,
   Pagination,
   Loader,
-  Center
+  Center,
+  ScrollArea
 } from '@mantine/core'
 import { useDebouncedValue } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
@@ -79,41 +80,65 @@ const Estudiantes = () => {
           </Center>
         ) : (
           <>
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>Nombre</Table.Th>
-                  <Table.Th>Identificación</Table.Th>
-                  <Table.Th>Código Carnet</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Estado</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {estudiantes.map((estudiante) => (
-                  <Table.Tr key={estudiante._id}>
-                    <Table.Td>{estudiante.nombre}</Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{estudiante.tipo_identificacion}</Text>
-                      <Text size="xs" c="dimmed">{estudiante.identificacion}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="green">
-                        {estudiante.codigo_carnet}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{estudiante.email}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge color={estudiante.activo ? 'green' : 'gray'} variant="light">
-                        {estudiante.activo ? 'Activo' : 'Inactivo'}
-                      </Badge>
-                    </Table.Td>
+            <ScrollArea>
+              <Table striped highlightOnHover horizontalSpacing="xs" verticalSpacing="xs" fontSize="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ minWidth: 200 }}>Nombre</Table.Th>
+                    <Table.Th style={{ minWidth: 120 }}>Identificación</Table.Th>
+                    <Table.Th style={{ minWidth: 130 }}>Código Carnet</Table.Th>
+                    <Table.Th style={{ minWidth: 200 }}>Email</Table.Th>
+                    <Table.Th style={{ minWidth: 150 }}>Tipo Vinculación</Table.Th>
+                    <Table.Th style={{ minWidth: 180 }}>Facultad</Table.Th>
+                    <Table.Th style={{ minWidth: 220 }}>Programa</Table.Th>
+                    <Table.Th style={{ minWidth: 80 }}>Sem.</Table.Th>
+                    <Table.Th style={{ minWidth: 150 }}>Circunscripción</Table.Th>
+                    <Table.Th style={{ minWidth: 90 }}>Estado</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {estudiantes.map((estudiante) => (
+                    <Table.Tr key={estudiante._id}>
+                      <Table.Td>
+                        <Text size="sm" lineClamp={1}>{estudiante.nombre}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs">{estudiante.tipo_identificacion}</Text>
+                        <Text size="xs" c="dimmed">{estudiante.identificacion}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="green" size="sm">
+                          {estudiante.codigo_carnet}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={1}>{estudiante.email}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={1}>{estudiante.tipo_vinculacion || '-'}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={2}>{estudiante.facultad || '-'}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={2}>{estudiante.programa || '-'}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" ta="center">{estudiante.sem || '-'}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={1}>{estudiante.circunscripcion || '-'}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge color={estudiante.activo ? 'green' : 'gray'} variant="light" size="sm">
+                          {estudiante.activo ? 'Activo' : 'Inactivo'}
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
 
             {totalPages > 1 && (
               <Group justify="center" mt="xl">

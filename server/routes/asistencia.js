@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const ExcelJS = require('exceljs');
 const Asistencia = require('../models/Asistencia');
 const Estudiante = require('../models/Estudiante');
 const Evento = require('../models/Evento');
@@ -226,6 +227,94 @@ router.delete('/:id', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       message: 'Error al eliminar asistencia', 
+      error: error.message 
+    });
+  }
+});
+
+// Exportar asistencias a Excel
+router.get('/evento/:eventoId/exportar', async (req, res) => {
+  try {
+    // Obtener evento
+    const evento = await Evento.findById(req.params.eventoId);
+    if (!evento) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Evento no encontrado' 
+      });
+    }
+
+    // Obtener asistencias con datos de estudiantes
+    const asistencias = await Asistencia.find({ evento: req.params.eventoId })
+      .populate('estudiante')
+      .sort({ fecha_registro: 1 });
+
+    // Crear workbook y worksheet
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet('Asistencias');
+
+    // Configurar columnas
+    worksheet.columns = [
+      { header: 'NOMBRES Y APELLIDOS', key: 'nombre', width: 40 },
+      { header: 'DOCUMENTO DE IDENTIDAD', key: 'identificacion', width: 20 },
+      { header: 'TIPO DE VINCULACION', key: 'tipo_vinculacion', width: 25 },
+      { header: 'FACULTAD', key: 'facultad', width: 30 },
+      { header: 'NOMBRE_PROGRAMA', key: 'programa', width: 40 },
+      { header: 'SEM', key: 'sem', width: 10 },
+      { header: 'CIRCUNSCRIPCION', key: 'circunscripcion', width: 25 }
+    ];
+
+    // Estilo del encabezado
+    worksheet.getRow(1).font = { bold: true, size: 12 };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4CAF50' }
+    };
+    worksheet.getRow(1).alignment = { vertical: 'middle', horizontal: 'center' };
+
+    // Agregar datos
+    asistencias.forEach((asistencia) => {
+      if (asistencia.estudiante) {
+        worksheet.addRow({
+          nombre: asistencia.estudiante.nombre || '',
+          identificacion: asistencia.estudiante.identificacion || '',
+          tipo_vinculacion: asistencia.estudiante.tipo_vinculacion || '',
+          facultad: asistencia.estudiante.facultad || '',
+          programa: asistencia.estudiante.programa || '',
+          sem: asistencia.estudiante.sem || '',
+          circunscripcion: asistencia.estudiante.circunscripcion || ''
+        });
+      }
+    });
+
+    // Aplicar bordes a todas las celdas con datos
+    worksheet.eachRow({ includeEmpty: false }, (row, rowNumber) => {
+      row.eachCell({ includeEmpty: true }, (cell) => {
+        cell.border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+    });
+
+    // Configurar respuesta
+    const filename = `asistencias_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+
+    // Enviar archivo
+    await workbook.xlsx.write(res);
+    res.end();
+
+  } catch (error) {
+    console.error('Error al exportar asistencias:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al exportar asistencias', 
       error: error.message 
     });
   }

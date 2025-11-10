@@ -27,8 +27,12 @@ async function syncStudents() {
 
     // Leer el CSV
     await new Promise((resolve, reject) => {
-      fs.createReadStream(CSV_PATH, { encoding: 'latin1' })
-        .pipe(csv({ separator: ';' }))
+      fs.createReadStream(CSV_PATH, { encoding: 'utf8' })
+        .pipe(csv({ 
+          separator: ';',
+          skipLines: 0,
+          mapHeaders: ({ header }) => header.replace(/^\uFEFF/, '').trim()
+        }))
         .on('data', (row) => {
           lineCount++;
           try {
@@ -42,6 +46,11 @@ async function syncStudents() {
                 identificacion: row.identificacion.trim(),
                 codigo_carnet: row.codigo_carnet.trim().toUpperCase(),
                 email: row.email.trim().toLowerCase(),
+                tipo_vinculacion: row.tipo_vinculacion ? row.tipo_vinculacion.trim() : '',
+                facultad: row.facultad ? row.facultad.trim() : '',
+                programa: row.programa ? row.programa.trim() : '',
+                sem: row.sem ? row.sem.trim() : '',
+                circunscripcion: row.circunscripcion ? row.circunscripcion.trim() : '',
                 activo: true
               });
             } else {

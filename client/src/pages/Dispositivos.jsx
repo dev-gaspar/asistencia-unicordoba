@@ -14,7 +14,8 @@ import {
   Text,
   Card,
   Loader,
-  Center
+  Center,
+  ScrollArea
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
@@ -168,63 +169,67 @@ const Dispositivos = () => {
       </Group>
 
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Código</Table.Th>
-              <Table.Th>Nombre</Table.Th>
-              <Table.Th>Ubicación</Table.Th>
-              <Table.Th>Estado</Table.Th>
-              <Table.Th>Acciones</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {dispositivos.map((dispositivo) => (
-              <Table.Tr key={dispositivo._id}>
-                <Table.Td>
-                  <Group gap="xs">
-                    <IconDeviceDesktop size={16} />
-                    <Badge variant="light" color="grape">
-                      {dispositivo.codigo}
-                    </Badge>
-                  </Group>
-                </Table.Td>
-                <Table.Td>
-                  <Text fw={500}>{dispositivo.nombre}</Text>
-                  {dispositivo.nota && (
-                    <Text size="xs" c="dimmed">{dispositivo.nota}</Text>
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{dispositivo.ubicacion || '-'}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={dispositivo.activo ? 'green' : 'gray'} variant="light">
-                    {dispositivo.activo ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon
-                      variant="light"
-                      color="blue"
-                      onClick={() => handleOpenModal(dispositivo)}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="red"
-                      onClick={() => handleDelete(dispositivo)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
+        <ScrollArea>
+          <Table striped highlightOnHover horizontalSpacing="sm" verticalSpacing="xs" fontSize="sm">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ minWidth: 120 }}>Código</Table.Th>
+                <Table.Th style={{ minWidth: 200 }}>Nombre</Table.Th>
+                <Table.Th style={{ minWidth: 180 }}>Ubicación</Table.Th>
+                <Table.Th style={{ minWidth: 100 }}>Estado</Table.Th>
+                <Table.Th style={{ minWidth: 100 }}>Acciones</Table.Th>
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {dispositivos.map((dispositivo) => (
+                <Table.Tr key={dispositivo._id}>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <IconDeviceDesktop size={14} />
+                      <Badge variant="light" color="grape" size="sm">
+                        {dispositivo.codigo}
+                      </Badge>
+                    </Group>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text fw={500} size="sm" lineClamp={1}>{dispositivo.nombre}</Text>
+                    {dispositivo.nota && (
+                      <Text size="xs" c="dimmed" lineClamp={1}>{dispositivo.nota}</Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" lineClamp={1}>{dispositivo.ubicacion || '-'}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={dispositivo.activo ? 'green' : 'gray'} variant="light" size="sm">
+                      {dispositivo.activo ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" wrap="nowrap">
+                      <ActionIcon
+                        variant="light"
+                        color="blue"
+                        onClick={() => handleOpenModal(dispositivo)}
+                        size="sm"
+                      >
+                        <IconEdit size={14} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="red"
+                        onClick={() => handleDelete(dispositivo)}
+                        size="sm"
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       </Card>
 
       <Modal

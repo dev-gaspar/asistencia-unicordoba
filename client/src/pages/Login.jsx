@@ -10,7 +10,6 @@ import {
   Button,
   Stack,
   Box,
-  Center
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { notifications } from '@mantine/notifications'
@@ -66,26 +65,6 @@ const Login = () => {
       }}
     >
       <Container size={420}>
-        <Center mb="xl">
-          <Box
-            w={80}
-            h={80}
-            style={{
-              background: 'white',
-              borderRadius: '16px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: '36px',
-              fontWeight: 'bold',
-              color: '#43a047',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-            }}
-          >
-            UC
-          </Box>
-        </Center>
-
         <Paper withBorder shadow="xl" p={40} radius="md">
           <Title order={2} ta="center" c="green.7" mb="xs">
             Bienvenido

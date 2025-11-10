@@ -11,7 +11,8 @@ import {
   Text,
   rem,
   UnstyledButton,
-  Box
+  Box,
+  Image,
 } from '@mantine/core'
 import { useDisclosure } from '@mantine/hooks'
 import {
@@ -26,6 +27,7 @@ import {
   IconChevronDown
 } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
+import logo from '../assets/logo.png'
 
 const DashboardLayout = () => {
   const [opened, { toggle }] = useDisclosure()
@@ -70,23 +72,13 @@ const DashboardLayout = () => {
               hiddenFrom="sm"
               size="sm"
             />
-            <Group gap="xs">
-              <Box
-                w={40}
-                h={40}
-                style={{
-                  background: 'linear-gradient(135deg, #43a047 0%, #2e7d32 100%)',
-                  borderRadius: '8px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '20px',
-                  fontWeight: 'bold'
-                }}
-              >
-                UC
-              </Box>
+            <Group gap="sm">
+              <Image
+                src={logo}
+                alt="Universidad de Córdoba"
+                h={50}
+                w="auto"
+              />
               <div>
                 <Title order={4} c="green.7">
                   Universidad de Córdoba
@@ -157,10 +149,7 @@ const DashboardLayout = () => {
             }}
           >
             <Text size="xs" c="green.9" fw={600}>
-              Universidad de Córdoba
-            </Text>
-            <Text size="xs" c="green.7">
-              Montería, Colombia
+              Sistema de Asistencia
             </Text>
           </Box>
         </AppShell.Section>

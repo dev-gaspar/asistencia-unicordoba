@@ -76,7 +76,23 @@ export const asistenciaService = {
   getByEvento: (eventoId) => api.get(`/asistencia/evento/${eventoId}`),
   getEstadisticas: (eventoId) => api.get(`/asistencia/evento/${eventoId}/estadisticas`),
   getByEstudiante: (estudianteId) => api.get(`/asistencia/estudiante/${estudianteId}`),
-  delete: (id) => api.delete(`/asistencia/${id}`)
+  delete: (id) => api.delete(`/asistencia/${id}`),
+  exportarExcel: async (eventoId) => {
+    const token = localStorage.getItem('token')
+    const response = await fetch(`${API_URL}/asistencia/evento/${eventoId}/exportar`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    })
+    
+    if (!response.ok) {
+      throw new Error('Error al exportar asistencias')
+    }
+    
+    const blob = await response.blob()
+    return blob
+  }
 }
 
 // Upload Service

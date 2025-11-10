@@ -30,6 +30,31 @@ const estudianteSchema = new mongoose.Schema({
     lowercase: true,
     trim: true
   },
+  tipo_vinculacion: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  facultad: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  programa: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  sem: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+  circunscripcion: {
+    type: String,
+    trim: true,
+    default: ''
+  },
   activo: {
     type: Boolean,
     default: true

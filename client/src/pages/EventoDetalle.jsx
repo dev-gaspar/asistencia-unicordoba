@@ -13,7 +13,12 @@ import {
   Center,
   Grid,
   Image,
-  ThemeIcon
+  ThemeIcon,
+  Paper,
+  SimpleGrid,
+  Box,
+  Divider,
+  ScrollArea
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import {
@@ -22,7 +27,8 @@ import {
   IconClock,
   IconMapPin,
   IconDeviceDesktop,
-  IconUsers
+  IconUsers,
+  IconDownload
 } from '@tabler/icons-react'
 import { eventosService, asistenciaService } from '../services/api'
 import dayjs from 'dayjs'
@@ -33,6 +39,7 @@ const EventoDetalle = () => {
   const [evento, setEvento] = useState(null)
   const [asistencias, setAsistencias] = useState([])
   const [loading, setLoading] = useState(true)
+  const [exportando, setExportando] = useState(false)
 
   useEffect(() => {
     loadEvento()
@@ -73,6 +80,37 @@ const EventoDetalle = () => {
     }
   }
 
+  const handleExportarExcel = async () => {
+    try {
+      setExportando(true)
+      const blob = await asistenciaService.exportarExcel(id)
+
+      // Crear link de descarga
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `asistencias_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+
+      notifications.show({
+        title: 'Éxito',
+        message: 'Asistencias exportadas correctamente',
+        color: 'green'
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo exportar las asistencias',
+        color: 'red'
+      })
+    } finally {
+      setExportando(false)
+    }
+  }
+
   if (!evento) {
     return (
       <Center h={400}>
@@ -82,130 +120,124 @@ const EventoDetalle = () => {
   }
 
   return (
-    <Stack gap="lg">
-      <Group>
+    <Stack gap="md">
+      <Group justify="space-between" wrap="wrap">
         <Button
           variant="light"
           leftSection={<IconArrowLeft size={16} />}
           onClick={() => navigate('/eventos')}
+          size="sm"
         >
           Volver
         </Button>
+        <Group gap="xs">
+          <Button
+            color="green"
+            leftSection={<IconDownload size={16} />}
+            onClick={handleExportarExcel}
+            loading={exportando}
+            disabled={asistencias.length === 0}
+            size="sm"
+          >
+            Exportar a Excel
+          </Button>
+        </Group>
       </Group>
 
-      <Grid>
-        <Grid.Col span={{ base: 12, md: 8 }}>
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
-            {evento.imagen_url && (
+      <Card shadow="sm" padding="md" radius="md" withBorder>
+        <Grid gutter="md">
+          {evento.imagen_url && (
+            <Grid.Col span={{ base: 12, sm: 4, md: 3 }}>
               <Image
                 src={`${evento.imagen_url}`}
                 alt={evento.nombre}
                 radius="md"
-                h={300}
+                h={180}
                 fit="cover"
-                mb="lg"
               />
-            )}
+            </Grid.Col>
+          )}
 
-            <Title order={1} c="green.7" mb="md">
-              {evento.nombre}
-            </Title>
-
-            {evento.descripcion && (
-              <Text c="dimmed" mb="xl">
-                {evento.descripcion}
-              </Text>
-            )}
-
-            <Grid gutter="md">
-              <Grid.Col span={6}>
+          <Grid.Col span={{ base: 12, sm: evento.imagen_url ? 8 : 12, md: evento.imagen_url ? 9 : 12 }}>
+            <Stack gap="xs">
+              <Group justify="space-between" align="flex-start">
+                <div>
+                  <Title order={2} c="green.7">
+                    {evento.nombre}
+                  </Title>
+                  {evento.descripcion && (
+                    <Text c="dimmed" size="sm" mt={4}>
+                      {evento.descripcion}
+                    </Text>
+                  )}
+                </div>
                 <Group gap="xs">
-                  <ThemeIcon variant="light" color="blue" size="lg">
-                    <IconCalendar size={20} />
+                  <Badge color={evento.activo ? 'green' : 'gray'} size="md">
+                    {evento.activo ? 'Activo' : 'Inactivo'}
+                  </Badge>
+                  {evento.finalizado && (
+                    <Badge color="blue" size="md">
+                      Finalizado
+                    </Badge>
+                  )}
+                </Group>
+              </Group>
+
+              <Divider my="xs" />
+
+              <SimpleGrid cols={{ base: 2, sm: 4 }} spacing="md">
+                <Group gap="xs" wrap="nowrap">
+                  <ThemeIcon variant="light" color="blue" size="sm">
+                    <IconCalendar size={16} />
                   </ThemeIcon>
-                  <div>
+                  <Box style={{ minWidth: 0 }}>
                     <Text size="xs" c="dimmed">Fecha</Text>
-                    <Text fw={500}>{dayjs(evento.fecha).format('DD/MM/YYYY')}</Text>
-                  </div>
+                    <Text size="sm" fw={500}>{dayjs(evento.fecha).format('DD/MM/YYYY')}</Text>
+                  </Box>
                 </Group>
-              </Grid.Col>
 
-              <Grid.Col span={6}>
-                <Group gap="xs">
-                  <ThemeIcon variant="light" color="orange" size="lg">
-                    <IconClock size={20} />
+                <Group gap="xs" wrap="nowrap">
+                  <ThemeIcon variant="light" color="orange" size="sm">
+                    <IconClock size={16} />
                   </ThemeIcon>
-                  <div>
+                  <Box style={{ minWidth: 0 }}>
                     <Text size="xs" c="dimmed">Horario</Text>
-                    <Text fw={500}>{evento.hora_inicio} - {evento.hora_fin}</Text>
-                  </div>
+                    <Text size="sm" fw={500}>{evento.hora_inicio} - {evento.hora_fin}</Text>
+                  </Box>
                 </Group>
-              </Grid.Col>
 
-              <Grid.Col span={6}>
-                <Group gap="xs">
-                  <ThemeIcon variant="light" color="red" size="lg">
-                    <IconMapPin size={20} />
+                <Group gap="xs" wrap="nowrap">
+                  <ThemeIcon variant="light" color="red" size="sm">
+                    <IconMapPin size={16} />
                   </ThemeIcon>
-                  <div>
+                  <Box style={{ minWidth: 0 }}>
                     <Text size="xs" c="dimmed">Lugar</Text>
-                    <Text fw={500}>{evento.lugar}</Text>
-                  </div>
+                    <Text size="sm" fw={500} lineClamp={1}>{evento.lugar}</Text>
+                  </Box>
                 </Group>
-              </Grid.Col>
 
-              <Grid.Col span={6}>
-                <Group gap="xs">
-                  <ThemeIcon variant="light" color="grape" size="lg">
-                    <IconDeviceDesktop size={20} />
+                <Group gap="xs" wrap="nowrap">
+                  <ThemeIcon variant="light" color="grape" size="sm">
+                    <IconDeviceDesktop size={16} />
                   </ThemeIcon>
-                  <div>
+                  <Box style={{ minWidth: 0 }}>
                     <Text size="xs" c="dimmed">Dispositivo</Text>
-                    <Text fw={500}>{evento.dispositivo?.codigo}</Text>
-                  </div>
+                    <Text size="sm" fw={500}>{evento.dispositivo?.codigo}</Text>
+                  </Box>
                 </Group>
-              </Grid.Col>
-            </Grid>
+              </SimpleGrid>
+            </Stack>
+          </Grid.Col>
+        </Grid>
+      </Card>
 
-            <Group mt="xl" gap="xs">
-              <Badge color={evento.activo ? 'green' : 'gray'} size="lg">
-                {evento.activo ? 'Activo' : 'Inactivo'}
-              </Badge>
-              {evento.finalizado && (
-                <Badge color="blue" size="lg">
-                  Finalizado
-                </Badge>
-              )}
-            </Group>
-          </Card>
-        </Grid.Col>
-
-        <Grid.Col span={{ base: 12, md: 4 }}>
-          <Card shadow="sm" padding="lg" radius="md" withBorder>
-            <Group gap="xs" mb="md">
-              <ThemeIcon variant="light" color="green" size="lg">
-                <IconUsers size={20} />
-              </ThemeIcon>
-              <Title order={3}>Asistencias</Title>
-            </Group>
-            <Center>
-              <Stack align="center">
-                <Text size={60} fw={700} c="green">
-                  {asistencias.length}
-                </Text>
-                <Text size="sm" c="dimmed">
-                  personas registradas
-                </Text>
-              </Stack>
-            </Center>
-          </Card>
-        </Grid.Col>
-      </Grid>
-
-      <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Title order={3} mb="md">
-          Lista de Asistencias
-        </Title>
+      <Card shadow="sm" padding="md" radius="md" withBorder>
+        <Group justify="space-between" mb="sm">
+          <Title order={4}>Lista de Asistencias</Title>
+          <Badge size="lg" variant="light" color="green">
+            {asistencias.length} registros
+          </Badge>
+        </Group>
 
         {loading ? (
           <Center h={200}>
@@ -216,40 +248,42 @@ const EventoDetalle = () => {
             <Text c="dimmed">No hay asistencias registradas aún</Text>
           </Center>
         ) : (
-          <Table striped highlightOnHover>
-            <Table.Thead>
-              <Table.Tr>
-                <Table.Th>#</Table.Th>
-                <Table.Th>Estudiante</Table.Th>
-                <Table.Th>Código Carnet</Table.Th>
-                <Table.Th>Email</Table.Th>
-                <Table.Th>Fecha Registro</Table.Th>
-              </Table.Tr>
-            </Table.Thead>
-            <Table.Tbody>
-              {asistencias.map((asistencia, index) => (
-                <Table.Tr key={asistencia._id}>
-                  <Table.Td>{index + 1}</Table.Td>
-                  <Table.Td>
-                    <Text fw={500}>{asistencia.estudiante?.nombre}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Badge variant="light" color="green">
-                      {asistencia.codigo_carnet_escaneado}
-                    </Badge>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">{asistencia.estudiante?.email}</Text>
-                  </Table.Td>
-                  <Table.Td>
-                    <Text size="sm">
-                      {dayjs(asistencia.fecha_registro).format('DD/MM/YYYY HH:mm:ss')}
-                    </Text>
-                  </Table.Td>
+          <ScrollArea>
+            <Table striped highlightOnHover horizontalSpacing="xs" verticalSpacing="xs" fontSize="sm">
+              <Table.Thead>
+                <Table.Tr>
+                  <Table.Th style={{ width: 50 }}>#</Table.Th>
+                  <Table.Th style={{ minWidth: 250 }}>Estudiante</Table.Th>
+                  <Table.Th style={{ minWidth: 130 }}>Código Carnet</Table.Th>
+                  <Table.Th style={{ minWidth: 200 }}>Email</Table.Th>
+                  <Table.Th style={{ minWidth: 150 }}>Fecha Registro</Table.Th>
                 </Table.Tr>
-              ))}
-            </Table.Tbody>
-          </Table>
+              </Table.Thead>
+              <Table.Tbody>
+                {asistencias.map((asistencia, index) => (
+                  <Table.Tr key={asistencia._id}>
+                    <Table.Td>{index + 1}</Table.Td>
+                    <Table.Td>
+                      <Text size="sm" fw={500} lineClamp={1}>{asistencia.estudiante?.nombre}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Badge variant="light" color="green" size="sm">
+                        {asistencia.codigo_carnet_escaneado}
+                      </Badge>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="xs" lineClamp={1}>{asistencia.estudiante?.email}</Text>
+                    </Table.Td>
+                    <Table.Td>
+                      <Text size="xs">
+                        {dayjs(asistencia.fecha_registro).format('DD/MM/YYYY HH:mm:ss')}
+                      </Text>
+                    </Table.Td>
+                  </Table.Tr>
+                ))}
+              </Table.Tbody>
+            </Table>
+          </ScrollArea>
         )}
       </Card>
     </Stack>

@@ -18,15 +18,16 @@ import {
   Loader,
   Center,
   Image,
-  FileButton
+  FileButton,
+  ScrollArea
 } from '@mantine/core'
 import { DatePickerInput, TimeInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconEdit, IconTrash, IconEye, IconUpload } from '@tabler/icons-react'
-import { eventosService, dispositivosService, uploadService } from '../services/api'
+import { IconPlus, IconEdit, IconTrash, IconEye, IconUpload, IconDownload } from '@tabler/icons-react'
+import { eventosService, dispositivosService, uploadService, asistenciaService } from '../services/api'
 import dayjs from 'dayjs'
 
 const Eventos = () => {
@@ -37,6 +38,7 @@ const Eventos = () => {
   const [editingEvento, setEditingEvento] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
   const [imageFile, setImageFile] = useState(null)
+  const [exportandoEventoId, setExportandoEventoId] = useState(null)
   const navigate = useNavigate()
 
   const form = useForm({
@@ -197,6 +199,37 @@ const Eventos = () => {
     })
   }
 
+  const handleExportarExcel = async (evento) => {
+    try {
+      setExportandoEventoId(evento._id)
+      const blob = await asistenciaService.exportarExcel(evento._id)
+      
+      // Crear link de descarga
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `asistencias_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      document.body.removeChild(a)
+      
+      notifications.show({
+        title: 'Éxito',
+        message: 'Asistencias exportadas correctamente',
+        color: 'green'
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo exportar las asistencias',
+        color: 'red'
+      })
+    } finally {
+      setExportandoEventoId(null)
+    }
+  }
+
   if (loading) {
     return (
       <Center h={400}>
@@ -231,83 +264,101 @@ const Eventos = () => {
       </Group>
 
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Nombre</Table.Th>
-              <Table.Th>Fecha y Hora</Table.Th>
-              <Table.Th>Lugar</Table.Th>
-              <Table.Th>Dispositivo</Table.Th>
-              <Table.Th>Estado</Table.Th>
-              <Table.Th>Acciones</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {eventos.map((evento) => (
-              <Table.Tr key={evento._id}>
-                <Table.Td>
-                  <Text fw={500}>{evento.nombre}</Text>
-                  {evento.descripcion && (
-                    <Text size="xs" c="dimmed" lineClamp={1}>
-                      {evento.descripcion}
-                    </Text>
-                  )}
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{dayjs(evento.fecha).format('DD/MM/YYYY')}</Text>
-                  <Text size="xs" c="dimmed">
-                    {evento.hora_inicio} - {evento.hora_fin}
-                  </Text>
-                </Table.Td>
-                <Table.Td>
-                  <Text size="sm">{evento.lugar}</Text>
-                </Table.Td>
-                <Table.Td>
-                  <Badge variant="light" color="grape">
-                    {evento.dispositivo?.codigo}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Stack gap={4}>
-                    <Badge color={evento.activo ? 'green' : 'gray'} variant="light" size="sm">
-                      {evento.activo ? 'Activo' : 'Inactivo'}
-                    </Badge>
-                    {evento.finalizado && (
-                      <Badge color="blue" variant="light" size="sm">
-                        Finalizado
-                      </Badge>
-                    )}
-                  </Stack>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon
-                      variant="light"
-                      color="green"
-                      onClick={() => navigate(`/eventos/${evento._id}`)}
-                    >
-                      <IconEye size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="blue"
-                      onClick={() => handleOpenModal(evento)}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="red"
-                      onClick={() => handleDelete(evento)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
+        <ScrollArea>
+          <Table striped highlightOnHover horizontalSpacing="sm" verticalSpacing="xs" fontSize="sm">
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ minWidth: 200 }}>Nombre</Table.Th>
+                <Table.Th style={{ minWidth: 140 }}>Fecha y Hora</Table.Th>
+                <Table.Th style={{ minWidth: 150 }}>Lugar</Table.Th>
+                <Table.Th style={{ minWidth: 120 }}>Dispositivo</Table.Th>
+                <Table.Th style={{ minWidth: 110 }}>Estado</Table.Th>
+                <Table.Th style={{ minWidth: 160 }}>Acciones</Table.Th>
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {eventos.map((evento) => (
+                <Table.Tr key={evento._id}>
+                  <Table.Td>
+                    <Text fw={500} size="sm" lineClamp={1}>{evento.nombre}</Text>
+                    {evento.descripcion && (
+                      <Text size="xs" c="dimmed" lineClamp={1}>
+                        {evento.descripcion}
+                      </Text>
+                    )}
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs">{dayjs(evento.fecha).format('DD/MM/YYYY')}</Text>
+                    <Text size="xs" c="dimmed">
+                      {evento.hora_inicio} - {evento.hora_fin}
+                    </Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Text size="xs" lineClamp={1}>{evento.lugar}</Text>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge variant="light" color="grape" size="sm">
+                      {evento.dispositivo?.codigo}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Stack gap={4}>
+                      <Badge color={evento.activo ? 'green' : 'gray'} variant="light" size="xs">
+                        {evento.activo ? 'Activo' : 'Inactivo'}
+                      </Badge>
+                      {evento.finalizado && (
+                        <Badge color="blue" variant="light" size="xs">
+                          Finalizado
+                        </Badge>
+                      )}
+                    </Stack>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs" wrap="nowrap">
+                      <ActionIcon
+                        variant="light"
+                        color="green"
+                        onClick={() => navigate(`/eventos/${evento._id}`)}
+                        title="Ver detalle"
+                        size="sm"
+                      >
+                        <IconEye size={14} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="teal"
+                        onClick={() => handleExportarExcel(evento)}
+                        loading={exportandoEventoId === evento._id}
+                        title="Exportar asistencias"
+                        size="sm"
+                      >
+                        <IconDownload size={14} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="blue"
+                        onClick={() => handleOpenModal(evento)}
+                        title="Editar"
+                        size="sm"
+                      >
+                        <IconEdit size={14} />
+                      </ActionIcon>
+                      <ActionIcon
+                        variant="light"
+                        color="red"
+                        onClick={() => handleDelete(evento)}
+                        title="Eliminar"
+                        size="sm"
+                      >
+                        <IconTrash size={14} />
+                      </ActionIcon>
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       </Card>
 
       <Modal

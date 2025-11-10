@@ -9,7 +9,8 @@ import {
   Card,
   Loader,
   Center,
-  Group
+  Group,
+  ScrollArea
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { eventosService, asistenciaService } from '../services/api'
@@ -120,50 +121,52 @@ const Asistencias = () => {
               <Text c="dimmed">No hay asistencias registradas para este evento</Text>
             </Center>
           ) : (
-            <Table striped highlightOnHover>
-              <Table.Thead>
-                <Table.Tr>
-                  <Table.Th>#</Table.Th>
-                  <Table.Th>Estudiante</Table.Th>
-                  <Table.Th>Código Carnet</Table.Th>
-                  <Table.Th>Identificación</Table.Th>
-                  <Table.Th>Email</Table.Th>
-                  <Table.Th>Fecha Registro</Table.Th>
-                  <Table.Th>Dispositivo</Table.Th>
-                </Table.Tr>
-              </Table.Thead>
-              <Table.Tbody>
-                {asistencias.map((asistencia, index) => (
-                  <Table.Tr key={asistencia._id}>
-                    <Table.Td>{index + 1}</Table.Td>
-                    <Table.Td>
-                      <Text fw={500}>{asistencia.estudiante?.nombre}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="green">
-                        {asistencia.codigo_carnet_escaneado}
-                      </Badge>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{asistencia.estudiante?.identificacion}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">{asistencia.estudiante?.email}</Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Text size="sm">
-                        {dayjs(asistencia.fecha_registro).format('DD/MM/YYYY HH:mm:ss')}
-                      </Text>
-                    </Table.Td>
-                    <Table.Td>
-                      <Badge variant="light" color="grape">
-                        {asistencia.dispositivo?.codigo}
-                      </Badge>
-                    </Table.Td>
+            <ScrollArea>
+              <Table striped highlightOnHover horizontalSpacing="xs" verticalSpacing="xs" fontSize="sm">
+                <Table.Thead>
+                  <Table.Tr>
+                    <Table.Th style={{ width: 50 }}>#</Table.Th>
+                    <Table.Th style={{ minWidth: 250 }}>Estudiante</Table.Th>
+                    <Table.Th style={{ minWidth: 130 }}>Código Carnet</Table.Th>
+                    <Table.Th style={{ minWidth: 120 }}>Identificación</Table.Th>
+                    <Table.Th style={{ minWidth: 200 }}>Email</Table.Th>
+                    <Table.Th style={{ minWidth: 150 }}>Fecha Registro</Table.Th>
+                    <Table.Th style={{ minWidth: 100 }}>Dispositivo</Table.Th>
                   </Table.Tr>
-                ))}
-              </Table.Tbody>
-            </Table>
+                </Table.Thead>
+                <Table.Tbody>
+                  {asistencias.map((asistencia, index) => (
+                    <Table.Tr key={asistencia._id}>
+                      <Table.Td>{index + 1}</Table.Td>
+                      <Table.Td>
+                        <Text size="sm" fw={500} lineClamp={1}>{asistencia.estudiante?.nombre}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="green" size="sm">
+                          {asistencia.codigo_carnet_escaneado}
+                        </Badge>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs">{asistencia.estudiante?.identificacion}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs" lineClamp={1}>{asistencia.estudiante?.email}</Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Text size="xs">
+                          {dayjs(asistencia.fecha_registro).format('DD/MM/YYYY HH:mm:ss')}
+                        </Text>
+                      </Table.Td>
+                      <Table.Td>
+                        <Badge variant="light" color="grape" size="sm">
+                          {asistencia.dispositivo?.codigo}
+                        </Badge>
+                      </Table.Td>
+                    </Table.Tr>
+                  ))}
+                </Table.Tbody>
+              </Table>
+            </ScrollArea>
           )}
         </Card>
       )}
