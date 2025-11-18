@@ -72,7 +72,7 @@ const Login = () => {
           <Text size="sm" ta="center" c="dimmed" mb="xl">
             Sistema de Asistencia a Eventos
             <br />
-            Universidad de Córdoba
+            Unicordoba
           </Text>
 
           <form onSubmit={form.onSubmit(handleSubmit)}>
@@ -109,7 +109,7 @@ const Login = () => {
           </form>
 
           <Text size="xs" ta="center" c="dimmed" mt="xl">
-            Sistema Institucional - Universidad de Córdoba
+            Sistema Institucional - Unicordoba
           </Text>
         </Paper>
       </Container>

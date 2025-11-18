@@ -12,6 +12,8 @@ import Dispositivos from '../pages/Dispositivos'
 import Eventos from '../pages/Eventos'
 import EventoDetalle from '../pages/EventoDetalle'
 import Asistencias from '../pages/Asistencias'
+import Areas from '../pages/Areas'
+import EscanearQR from '../pages/EscanearQR'
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth()
@@ -60,6 +62,8 @@ const AppRoutes = () => {
         <Route path="eventos" element={<Eventos />} />
         <Route path="eventos/:id" element={<EventoDetalle />} />
         <Route path="asistencias" element={<Asistencias />} />
+        <Route path="areas" element={<Areas />} />
+        <Route path="escanear-qr" element={<EscanearQR />} />
       </Route>
 
       <Route path="*" element={<Navigate to="/" replace />} />

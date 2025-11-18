@@ -1,4 +1,4 @@
-# Sistema de Asistencia a Eventos - Universidad de Córdoba
+# Sistema de Asistencia a Eventos - Unicordoba
 
 API REST completa para gestión de asistencia a eventos universitarios mediante dispositivos ESP32-CAM con lectores QR.
 
@@ -507,6 +507,6 @@ ISC
 
 ## 👨‍💻 Desarrollo
 
-**Universidad de Córdoba - Sistema de Asistencia a Eventos**
+**Unicordoba - Sistema de Asistencia a Eventos**
 
 Para más información o soporte técnico, contactar al administrador del sistema.

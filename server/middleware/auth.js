@@ -35,7 +35,7 @@ const verificarToken = async (req, res, next) => {
 
 // Verificar rol de administrador
 const esAdmin = (req, res, next) => {
-  if (req.usuario.rol !== 'admin') {
+  if (req.usuario.rol !== 'administrador') {
     return res.status(403).json({ 
       success: false, 
       message: 'Acceso denegado. Se requieren permisos de administrador.' 
@@ -44,4 +44,33 @@ const esAdmin = (req, res, next) => {
   next();
 };
 
-module.exports = { verificarToken, esAdmin };
+// Verificar rol de coordinador o superior
+const esCoordinadorOSuperior = (req, res, next) => {
+  if (!['administrador', 'coordinador'].includes(req.usuario.rol)) {
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Acceso denegado. Se requieren permisos de coordinador o administrador.' 
+    });
+  }
+  next();
+};
+
+// Verificar que sea administrador o coordinador del área
+const puedeGestionarArea = (area) => {
+  return (req, res, next) => {
+    if (req.usuario.rol === 'administrador') {
+      return next();
+    }
+    
+    if (req.usuario.rol === 'coordinador' && req.usuario.area === area) {
+      return next();
+    }
+    
+    return res.status(403).json({ 
+      success: false, 
+      message: 'Acceso denegado. No tienes permisos para gestionar esta área.' 
+    });
+  };
+};
+
+module.exports = { verificarToken, esAdmin, esCoordinadorOSuperior, puedeGestionarArea };

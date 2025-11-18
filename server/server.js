@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const path = require("path");
 const cors = require("cors");
+const dayjs = require("dayjs");
 const connectDB = require("./config/database");
 
 // Importar rutas
@@ -12,6 +13,7 @@ const dispositivosRoutes = require("./routes/dispositivos");
 const eventosRoutes = require("./routes/eventos");
 const asistenciaRoutes = require("./routes/asistencia");
 const uploadRoutes = require("./routes/upload");
+const areasRoutes = require("./routes/areas");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -36,7 +38,9 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
 // Logging middleware
 app.use((req, res, next) => {
-	console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+	console.log(
+		`${dayjs().format("YYYY-MM-DD HH:mm:ss")} - ${req.method} ${req.path}`
+	);
 	next();
 });
 
@@ -48,11 +52,12 @@ app.use("/api/dispositivos", dispositivosRoutes);
 app.use("/api/eventos", eventosRoutes);
 app.use("/api/asistencia", asistenciaRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/areas", areasRoutes);
 
 // Ruta raíz con documentación de la API
 app.get("/", (req, res) => {
 	res.json({
-		message: "🎓 Sistema de Asistencia - Universidad de Córdoba",
+		message: "🎓 Sistema de Asistencia - Unicordoba",
 		version: "1.0.0",
 		endpoints: {
 			Autenticación: {
@@ -103,6 +108,13 @@ app.get("/", (req, res) => {
 				"POST /api/upload": "Subir imagen (autenticado)",
 				"DELETE /api/upload/:filename": "Eliminar imagen (autenticado)",
 			},
+			Areas: {
+				"GET /api/areas": "Listar áreas (autenticado)",
+				"GET /api/areas/:id": "Obtener área (autenticado)",
+				"POST /api/areas": "Crear área (admin)",
+				"PUT /api/areas/:id": "Actualizar área (admin)",
+				"DELETE /api/areas/:id": "Eliminar área (admin)",
+			},
 		},
 		notas: {
 			autenticacion: "Incluir header: Authorization: Bearer <token>",
@@ -132,7 +144,7 @@ app.use((err, req, res, next) => {
 // Iniciar servidor
 app.listen(PORT, "0.0.0.0", () => {
 	console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-	console.log("🎓 Sistema de Asistencia - Universidad de Córdoba");
+	console.log("🎓 Sistema de Asistencia - Unicordoba");
 	console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
 	console.log(`📡 Servidor escuchando en puerto: ${PORT}`);
 	console.log(`🌐 URL: http://localhost:${PORT}`);

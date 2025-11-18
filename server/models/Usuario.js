@@ -2,6 +2,32 @@ const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 
 const usuarioSchema = new mongoose.Schema({
+  nombre: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  apellidos: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  cedula: {
+    type: String,
+    required: true,
+    unique: true,
+    trim: true
+  },
+  cargo: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  area: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Area',
+    required: true
+  },
   usuario: {
     type: String,
     required: true,
@@ -14,8 +40,13 @@ const usuarioSchema = new mongoose.Schema({
   },
   rol: {
     type: String,
-    enum: ['admin', 'operador'],
-    default: 'operador'
+    enum: ['administrador', 'coordinador', 'profesional'],
+    default: 'profesional'
+  },
+  creado_por: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    default: null
   },
   activo: {
     type: Boolean,

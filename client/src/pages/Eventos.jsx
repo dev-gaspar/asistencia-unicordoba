@@ -20,21 +20,27 @@ import {
   Image,
   FileButton,
   ScrollArea,
-  NumberInput
+  NumberInput,
+  Collapse,
+  Paper
 } from '@mantine/core'
 import { DatePickerInput, TimeInput } from '@mantine/dates'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
-import { IconPlus, IconEdit, IconTrash, IconEye, IconUpload, IconDownload } from '@tabler/icons-react'
-import { eventosService, dispositivosService, uploadService, asistenciaService, estudiantesService } from '../services/api'
+import { IconPlus, IconEdit, IconTrash, IconEye, IconUpload, IconDownload, IconFilter, IconFilterOff } from '@tabler/icons-react'
+import { eventosService, dispositivosService, uploadService, asistenciaService, estudiantesService, areasService } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import dayjs from 'dayjs'
 
 const Eventos = () => {
+  const { user } = useAuth()
   const [eventos, setEventos] = useState([])
   const [dispositivos, setDispositivos] = useState([])
+  const [areas, setAreas] = useState([])
   const [periodos, setPeriodos] = useState([])
+  const [profesionales, setProfesionales] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false)
   const [editingEvento, setEditingEvento] = useState(null)
@@ -43,6 +49,13 @@ const Eventos = () => {
   const [exportandoEventoId, setExportandoEventoId] = useState(null)
   const [anioEvento, setAnioEvento] = useState(new Date().getFullYear())
   const [semestreEvento, setSemestreEvento] = useState('I')
+  const [showFilters, setShowFilters] = useState(false)
+  
+  // Filtros
+  const [filtroArea, setFiltroArea] = useState('')
+  const [filtroPeriodo, setFiltroPeriodo] = useState('')
+  const [filtroProfesional, setFiltroProfesional] = useState('')
+  
   const navigate = useNavigate()
 
   const form = useForm({
@@ -56,6 +69,7 @@ const Eventos = () => {
       imagen_url: '',
       dispositivo: '',
       periodo: '',
+      area: '',
       activo: true,
       finalizado: false
     },
@@ -64,21 +78,32 @@ const Eventos = () => {
       fecha: (value) => (!value ? 'Fecha es requerida' : null),
       hora_inicio: (value) => (!value ? 'Hora de inicio es requerida' : null),
       hora_fin: (value) => (!value ? 'Hora de fin es requerida' : null),
-      lugar: (value) => (!value ? 'Lugar es requerido' : null),
-      dispositivo: (value) => (!value ? 'Dispositivo es requerido' : null)
+      lugar: (value) => (!value ? 'Lugar es requerido' : null)
     }
   })
 
   useEffect(() => {
     loadEventos()
     loadDispositivos()
+    loadAreas()
     loadPeriodos()
+    loadProfesionales()
   }, [])
+
+  useEffect(() => {
+    // Recargar eventos cuando cambian los filtros
+    loadEventos()
+  }, [filtroArea, filtroPeriodo, filtroProfesional])
 
   const loadEventos = async () => {
     try {
       setLoading(true)
-      const data = await eventosService.getAll()
+      const params = {}
+      if (filtroArea) params.area = filtroArea
+      if (filtroPeriodo) params.periodo = filtroPeriodo
+      if (filtroProfesional) params.profesional = filtroProfesional
+      
+      const data = await eventosService.getAll(params)
       setEventos(data.eventos || [])
     } catch (error) {
       notifications.show({
@@ -100,12 +125,30 @@ const Eventos = () => {
     }
   }
 
+  const loadAreas = async () => {
+    try {
+      const data = await areasService.getAll({ activo: true })
+      setAreas(data.areas || [])
+    } catch (error) {
+      console.error('Error loading areas:', error)
+    }
+  }
+
   const loadPeriodos = async () => {
     try {
       const data = await estudiantesService.getPeriodos()
       setPeriodos(data.periodos || [])
     } catch (error) {
       console.error('Error loading periodos:', error)
+    }
+  }
+
+  const loadProfesionales = async () => {
+    try {
+      const data = await eventosService.getProfesionales()
+      setProfesionales(data.profesionales || [])
+    } catch (error) {
+      console.error('Error loading profesionales:', error)
     }
   }
 
@@ -149,7 +192,8 @@ const Eventos = () => {
         lugar: evento.lugar,
         imagen_url: evento.imagen_url || '',
         periodo: evento.periodo || '',
-        dispositivo: evento.dispositivo._id || evento.dispositivo,
+        dispositivo: evento.dispositivo?._id || evento.dispositivo || '',
+        area: evento.area?._id || evento.area || '',
         activo: evento.activo,
         finalizado: evento.finalizado
       })
@@ -258,7 +302,13 @@ const Eventos = () => {
     }
   }
 
-  if (loading) {
+  const handleClearFilters = () => {
+    setFiltroArea('')
+    setFiltroPeriodo('')
+    setFiltroProfesional('')
+  }
+
+  if (loading && eventos.length === 0) {
     return (
       <Center h={400}>
         <Loader color="green" size="xl" />
@@ -270,6 +320,22 @@ const Eventos = () => {
     value: d._id,
     label: `${d.codigo} - ${d.nombre}`
   }))
+
+  const areasOptions = areas.map(area => ({
+    value: area._id,
+    label: area.nombre
+  }))
+
+  const periodosOptions = periodos.map(p => ({ value: p, label: p }))
+
+  const profesionalesOptions = profesionales.map(p => ({
+    value: p._id,
+    label: `${p.nombre} ${p.apellidos}${p.area?.nombre ? ` (${p.area.nombre})` : ''}`
+  }))
+
+  // Determinar si mostrar filtros según el rol
+  const mostrarFiltroArea = user?.rol === 'administrador'
+  const mostrarFiltroProfesional = user?.rol !== 'profesional'
 
   return (
     <Stack gap="lg">
@@ -291,6 +357,58 @@ const Eventos = () => {
         </Button>
       </Group>
 
+      {/* Filtros */}
+      <Paper shadow="xs" p="md" withBorder>
+        <Group justify="space-between" mb={showFilters ? "md" : 0}>
+          <Button
+            variant="light"
+            leftSection={showFilters ? <IconFilterOff size={16} /> : <IconFilter size={16} />}
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            {showFilters ? 'Ocultar Filtros' : 'Mostrar Filtros'}
+          </Button>
+          {(filtroArea || filtroPeriodo || filtroProfesional) && (
+            <Button variant="subtle" color="gray" onClick={handleClearFilters}>
+              Limpiar Filtros
+            </Button>
+          )}
+        </Group>
+
+        <Collapse in={showFilters}>
+          <Group grow>
+            {mostrarFiltroArea && (
+              <Select
+                label="Filtrar por Área"
+                placeholder="Selecciona un área"
+                data={areasOptions}
+                value={filtroArea}
+                onChange={setFiltroArea}
+                clearable
+              />
+            )}
+            <Select
+              label="Filtrar por Periodo"
+              placeholder="Selecciona un periodo"
+              data={periodosOptions}
+              value={filtroPeriodo}
+              onChange={setFiltroPeriodo}
+              clearable
+            />
+            {mostrarFiltroProfesional && (
+              <Select
+                label="Filtrar por Profesional"
+                placeholder="Selecciona un profesional"
+                data={profesionalesOptions}
+                value={filtroProfesional}
+                onChange={setFiltroProfesional}
+                clearable
+                searchable
+              />
+            )}
+          </Group>
+        </Collapse>
+      </Paper>
+
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <ScrollArea>
           <Table striped highlightOnHover horizontalSpacing="sm" verticalSpacing="xs" fontSize="sm">
@@ -301,6 +419,9 @@ const Eventos = () => {
                 <Table.Th style={{ minWidth: 150 }}>Lugar</Table.Th>
                 <Table.Th style={{ minWidth: 120 }}>Dispositivo</Table.Th>
                 <Table.Th style={{ minWidth: 100 }}>Periodo</Table.Th>
+                {user?.rol !== 'profesional' && (
+                  <Table.Th style={{ minWidth: 150 }}>Creado por</Table.Th>
+                )}
                 <Table.Th style={{ minWidth: 110 }}>Estado</Table.Th>
                 <Table.Th style={{ minWidth: 160 }}>Acciones</Table.Th>
               </Table.Tr>
@@ -335,6 +456,25 @@ const Eventos = () => {
                       {evento.periodo || 'N/A'}
                     </Badge>
                   </Table.Td>
+                  {user?.rol !== 'profesional' && (
+                    <Table.Td>
+                      <Text size="xs" lineClamp={1}>
+                        {evento.creado_por ? 
+                          `${evento.creado_por.nombre} ${evento.creado_por.apellidos}` : 
+                          'N/A'}
+                      </Text>
+                      {evento.creado_por?.area && (
+                        <Badge 
+                          size="xs" 
+                          variant="dot" 
+                          color={evento.creado_por.area.color}
+                          style={{ backgroundColor: `${evento.creado_por.area.color}15` }}
+                        >
+                          {evento.creado_por.area.nombre}
+                        </Badge>
+                      )}
+                    </Table.Td>
+                  )}
                   <Table.Td>
                     <Stack gap={4}>
                       <Badge color={evento.activo ? 'green' : 'gray'} variant="light" size="xs">
@@ -393,6 +533,12 @@ const Eventos = () => {
             </Table.Tbody>
           </Table>
         </ScrollArea>
+
+        {eventos.length === 0 && !loading && (
+          <Center h={200}>
+            <Text c="dimmed">No se encontraron eventos</Text>
+          </Center>
+        )}
       </Card>
 
       <Modal
@@ -477,12 +623,23 @@ const Eventos = () => {
 
             <Select
               label="Dispositivo"
-              placeholder="Selecciona el dispositivo"
+              placeholder="Selecciona el dispositivo (opcional)"
               data={dispositivosOptions}
               {...form.getInputProps('dispositivo')}
-              required
               searchable
+              clearable
             />
+
+            {user?.rol === 'administrador' && (
+              <Select
+                label="Área"
+                placeholder="Selecciona el área del evento"
+                data={areasOptions}
+                {...form.getInputProps('area')}
+                searchable
+                description="Solo el administrador puede cambiar el área del evento"
+              />
+            )}
 
             <div>
               <Text size="sm" fw={500} mb="xs">

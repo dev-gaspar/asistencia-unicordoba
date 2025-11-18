@@ -18,8 +18,12 @@ import {
   SimpleGrid,
   Box,
   Divider,
-  ScrollArea
+  ScrollArea,
+  FileButton,
+  Modal,
+  TextInput
 } from '@mantine/core'
+import { useDisclosure } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import {
   IconArrowLeft,
@@ -28,18 +32,26 @@ import {
   IconMapPin,
   IconDeviceDesktop,
   IconUsers,
-  IconDownload
+  IconDownload,
+  IconUpload,
+  IconPhoto,
+  IconTrash
 } from '@tabler/icons-react'
-import { eventosService, asistenciaService } from '../services/api'
+import { eventosService, asistenciaService, uploadService } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 import dayjs from 'dayjs'
 
 const EventoDetalle = () => {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const [evento, setEvento] = useState(null)
   const [asistencias, setAsistencias] = useState([])
   const [loading, setLoading] = useState(true)
   const [exportando, setExportando] = useState(false)
+  const [uploadingFoto, setUploadingFoto] = useState(false)
+  const [modalFotoOpened, { open: openModalFoto, close: closeModalFoto }] = useDisclosure(false)
+  const [nuevaFoto, setNuevaFoto] = useState({ url: '', descripcion: '' })
 
   useEffect(() => {
     loadEvento()
@@ -111,6 +123,78 @@ const EventoDetalle = () => {
     }
   }
 
+  const handleUploadFoto = async (file) => {
+    try {
+      setUploadingFoto(true)
+      const response = await uploadService.uploadImage(file)
+      setNuevaFoto({ ...nuevaFoto, url: response.url })
+      notifications.show({
+        title: 'Éxito',
+        message: 'Foto subida correctamente',
+        color: 'green'
+      })
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo subir la foto',
+        color: 'red'
+      })
+    } finally {
+      setUploadingFoto(false)
+    }
+  }
+
+  const handleAddFoto = async () => {
+    if (!nuevaFoto.url) {
+      notifications.show({
+        title: 'Error',
+        message: 'Debes subir una foto primero',
+        color: 'red'
+      })
+      return
+    }
+
+    try {
+      await eventosService.addFoto(id, nuevaFoto)
+      notifications.show({
+        title: 'Éxito',
+        message: 'Foto de evidencia añadida correctamente',
+        color: 'green'
+      })
+      setNuevaFoto({ url: '', descripcion: '' })
+      closeModalFoto()
+      loadEvento()
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo añadir la foto',
+        color: 'red'
+      })
+    }
+  }
+
+  const handleDeleteFoto = async (fotoId) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar esta foto?')) {
+      return
+    }
+
+    try {
+      await eventosService.deleteFoto(id, fotoId)
+      notifications.show({
+        title: 'Éxito',
+        message: 'Foto eliminada correctamente',
+        color: 'green'
+      })
+      loadEvento()
+    } catch (error) {
+      notifications.show({
+        title: 'Error',
+        message: 'No se pudo eliminar la foto',
+        color: 'red'
+      })
+    }
+  }
+
   if (!evento) {
     return (
       <Center h={400}>
@@ -131,6 +215,15 @@ const EventoDetalle = () => {
           Volver
         </Button>
         <Group gap="xs">
+          <Button
+            variant="light"
+            color="grape"
+            leftSection={<IconPhoto size={16} />}
+            onClick={openModalFoto}
+            size="sm"
+          >
+            Añadir Foto
+          </Button>
           <Button
             color="green"
             leftSection={<IconDownload size={16} />}
@@ -172,9 +265,19 @@ const EventoDetalle = () => {
                   )}
                 </div>
                 <Group gap="xs">
+                  {evento.area && (
+                    <Badge 
+                      color={evento.area.color || "cyan"} 
+                      size="md" 
+                      variant="filled"
+                      style={{ backgroundColor: evento.area.color }}
+                    >
+                      {evento.area.nombre}
+                    </Badge>
+                  )}
                   {evento.periodo && (
                     <Badge color="blue" size="md" variant="filled">
-                      Periodo: {evento.periodo}
+                      {evento.periodo}
                     </Badge>
                   )}
                   <Badge color={evento.activo ? 'green' : 'gray'} size="md">
@@ -231,10 +334,78 @@ const EventoDetalle = () => {
                   </Box>
                 </Group>
               </SimpleGrid>
+
+              {evento.creado_por && (
+                <>
+                  <Divider my="xs" />
+                  <Group gap="xs">
+                    <Text size="xs" c="dimmed">Creado por:</Text>
+                    <Text size="sm" fw={500}>
+                      {evento.creado_por.nombre} {evento.creado_por.apellidos}
+                    </Text>
+                    {evento.creado_por.area && (
+                      <Badge 
+                        size="xs" 
+                        color={evento.creado_por.area.color}
+                        style={{ backgroundColor: `${evento.creado_por.area.color}15` }}
+                      >
+                        {evento.creado_por.area.nombre}
+                      </Badge>
+                    )}
+                  </Group>
+                </>
+              )}
             </Stack>
           </Grid.Col>
         </Grid>
       </Card>
+
+      {/* Fotos de Evidencia */}
+      {evento.fotos_evidencia && evento.fotos_evidencia.length > 0 && (
+        <Card shadow="sm" padding="md" radius="md" withBorder>
+          <Title order={4} mb="md">Fotos de Evidencia</Title>
+          <SimpleGrid cols={{ base: 2, sm: 3, md: 4 }} spacing="md">
+            {evento.fotos_evidencia.map((foto, index) => (
+              <Card key={index} shadow="xs" padding="xs" withBorder style={{ height: '100%', position: 'relative' }}>
+                <Stack gap="xs" style={{ height: '100%' }}>
+                  <Box style={{ position: 'relative' }}>
+                    <Image
+                      src={foto.url}
+                      alt={foto.descripcion || `Foto ${index + 1}`}
+                      height={150}
+                      fit="cover"
+                      radius="md"
+                    />
+                    {user?.rol === 'administrador' && (
+                      <Button
+                        size="xs"
+                        color="red"
+                        variant="filled"
+                        style={{
+                          position: 'absolute',
+                          top: 5,
+                          right: 5
+                        }}
+                        onClick={() => handleDeleteFoto(foto._id)}
+                      >
+                        <IconTrash size={14} />
+                      </Button>
+                    )}
+                  </Box>
+                  {foto.descripcion && (
+                    <Text size="xs" lineClamp={2}>
+                      {foto.descripcion}
+                    </Text>
+                  )}
+                  <Text size="xs" c="dimmed">
+                    {dayjs(foto.fecha_subida).format('DD/MM/YYYY HH:mm')}
+                  </Text>
+                </Stack>
+              </Card>
+            ))}
+          </SimpleGrid>
+        </Card>
+      )}
 
       <Card shadow="sm" padding="md" radius="md" withBorder>
         <Group justify="space-between" mb="sm">
@@ -291,6 +462,56 @@ const EventoDetalle = () => {
           </ScrollArea>
         )}
       </Card>
+
+      {/* Modal para añadir fotos */}
+      <Modal
+        opened={modalFotoOpened}
+        onClose={closeModalFoto}
+        title="Añadir Foto de Evidencia"
+        size="md"
+      >
+        <Stack>
+          <FileButton onChange={handleUploadFoto} accept="image/*">
+            {(props) => (
+              <Button
+                {...props}
+                leftSection={<IconUpload size={16} />}
+                variant="light"
+                loading={uploadingFoto}
+                fullWidth
+              >
+                Subir Foto
+              </Button>
+            )}
+          </FileButton>
+
+          {nuevaFoto.url && (
+            <Image
+              src={nuevaFoto.url}
+              alt="Preview"
+              radius="md"
+              h={200}
+              fit="cover"
+            />
+          )}
+
+          <TextInput
+            label="Descripción (opcional)"
+            placeholder="Descripción de la foto"
+            value={nuevaFoto.descripcion}
+            onChange={(e) => setNuevaFoto({ ...nuevaFoto, descripcion: e.target.value })}
+          />
+
+          <Group justify="flex-end" mt="md">
+            <Button variant="light" onClick={closeModalFoto}>
+              Cancelar
+            </Button>
+            <Button color="green" onClick={handleAddFoto} disabled={!nuevaFoto.url}>
+              Añadir Foto
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Stack>
   )
 }

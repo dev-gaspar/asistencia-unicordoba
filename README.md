@@ -1,4 +1,4 @@
-# Sistema de Asistencia - Universidad de Córdoba
+# Sistema de Asistencia - Unicordoba
 
 Sistema de gestión de asistencia a eventos con ESP32, React y Node.js.
 

@@ -1,6 +1,6 @@
 # Sistema de Asistencia - Frontend
 
-Frontend desarrollado con React + Vite + Mantine para el Sistema de Asistencia a Eventos de la Universidad de Córdoba.
+Frontend desarrollado con React + Vite + Mantine para el Sistema de Asistencia a Eventos de la Unicordoba.
 
 ## 🚀 Tecnologías
 
@@ -35,6 +35,7 @@ npm run build
 ## 📱 Características
 
 ### Autenticación
+
 - Login con JWT
 - Protección de rutas
 - Manejo automático de tokens
@@ -42,26 +43,31 @@ npm run build
 ### Módulos
 
 #### Dashboard
+
 - Vista general del sistema
 - Estadísticas de estudiantes, dispositivos y eventos
 - Estado del sistema
 
 #### Usuarios (Solo Admin)
+
 - CRUD completo de usuarios
 - Asignación de roles (admin/operador)
 - Activación/desactivación de usuarios
 
 #### Estudiantes
+
 - Listado de 15,761 estudiantes sincronizados
 - Búsqueda por nombre, código, identificación o email
 - Paginación (50 por página)
 
 #### Dispositivos ESP32
+
 - CRUD completo de dispositivos
 - Códigos únicos para cada dispositivo
 - Gestión de ubicación y notas
 
 #### Eventos
+
 - CRUD completo de eventos
 - Upload de imágenes
 - Asignación a dispositivos
@@ -69,6 +75,7 @@ npm run build
 - Estados: activo/inactivo, finalizado
 
 #### Asistencias
+
 - Consulta de asistencias por evento
 - Listado detallado con información del estudiante
 - Exportación de datos
@@ -76,7 +83,7 @@ npm run build
 
 ## 🎨 Tema Institucional
 
-El frontend utiliza una paleta de colores verde institucional para la Universidad de Córdoba:
+El frontend utiliza una paleta de colores verde institucional para la Unicordoba:
 
 - **Primary**: Verde (#43a047, #2e7d32)
 - **Gradientes**: De verde claro a verde oscuro
@@ -87,6 +94,7 @@ El frontend utiliza una paleta de colores verde institucional para la Universida
 El sistema requiere autenticación para todas las rutas excepto `/login`.
 
 **Credenciales por defecto:**
+
 - Usuario: `admin`
 - Contraseña: `admin123`
 
@@ -130,29 +138,34 @@ client/
 ## 🎯 Funcionalidades Clave
 
 ### Sidebar Institucional
-- Logo de la Universidad de Córdoba
+
+- Logo de la Unicordoba
 - Navegación por módulos
 - Información del usuario logueado
 - Menú de cierre de sesión
 
 ### Tablas Interactivas
+
 - Ordenamiento
 - Búsqueda
 - Paginación
 - Acciones rápidas (editar, eliminar, ver)
 
 ### Formularios Completos
+
 - Validación en tiempo real
 - Mensajes de error claros
 - Upload de archivos (imágenes)
 - Selectores de fecha y hora
 
 ### Notificaciones
+
 - Confirmación de acciones
 - Mensajes de éxito/error
 - Toasts informativos
 
 ### Modales de Confirmación
+
 - Para acciones destructivas
 - Prevención de errores accidentales
 
@@ -189,7 +202,7 @@ El frontend consume todos los endpoints de la API:
 - **Admin**: Acceso completo a todos los módulos
 - **Operador**: Acceso a todos los módulos excepto Usuarios
 
-## 🎓 Universidad de Córdoba
+## 🎓 Unicordoba
 
 Sistema desarrollado para la gestión de asistencia a eventos institucionales.
 

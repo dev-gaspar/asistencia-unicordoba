@@ -1,23 +1,35 @@
 const express = require('express');
 const router = express.Router();
 const Usuario = require('../models/Usuario');
-const { verificarToken, esAdmin } = require('../middleware/auth');
+const { verificarToken, esAdmin, esCoordinadorOSuperior } = require('../middleware/auth');
 
-// Todas las rutas requieren autenticación y rol de admin
-router.use(verificarToken, esAdmin);
+// Todas las rutas requieren autenticación
+router.use(verificarToken);
 
 // Crear usuario
-router.post('/', async (req, res) => {
+router.post('/', esCoordinadorOSuperior, async (req, res) => {
   try {
-    const { usuario, contrasena, rol } = req.body;
+    const { nombre, apellidos, cedula, cargo, area, usuario, contrasena, rol } = req.body;
 
-    if (!usuario || !contrasena) {
+    // Validar campos requeridos
+    if (!nombre || !apellidos || !cedula || !cargo || !area || !usuario || !contrasena) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Usuario y contraseña son requeridos' 
+        message: 'Todos los campos son requeridos' 
       });
     }
 
+    // Validar que el área exista
+    const Area = require('../models/Area');
+    const areaExiste = await Area.findById(area);
+    if (!areaExiste || !areaExiste.activo) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Área no válida o inactiva' 
+      });
+    }
+
+    // Verificar que el usuario no exista
     const existeUsuario = await Usuario.findOne({ usuario });
     if (existeUsuario) {
       return res.status(400).json({ 
@@ -26,10 +38,49 @@ router.post('/', async (req, res) => {
       });
     }
 
+    // Verificar que la cédula no exista
+    const existeCedula = await Usuario.findOne({ cedula });
+    if (existeCedula) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'La cédula ya está registrada' 
+      });
+    }
+
+    // Lógica de permisos según rol del creador
+    let rolAsignado = rol || 'profesional';
+    let areaAsignada = area;
+
+    if (req.usuario.rol === 'coordinador') {
+      // Coordinador solo puede crear profesionales de su área
+      if (rol && rol !== 'profesional') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Los coordinadores solo pueden crear usuarios con rol de profesional' 
+        });
+      }
+      
+      if (area.toString() !== req.usuario.area.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'Solo puedes crear usuarios en tu área' 
+        });
+      }
+      
+      rolAsignado = 'profesional';
+      areaAsignada = req.usuario.area;
+    }
+
     const nuevoUsuario = new Usuario({
+      nombre,
+      apellidos,
+      cedula,
+      cargo,
+      area: areaAsignada,
       usuario,
       contrasena,
-      rol: rol || 'operador'
+      rol: rolAsignado,
+      creado_por: req.usuario._id
     });
 
     await nuevoUsuario.save();
@@ -39,6 +90,11 @@ router.post('/', async (req, res) => {
       message: 'Usuario creado exitosamente',
       usuario: {
         id: nuevoUsuario._id,
+        nombre: nuevoUsuario.nombre,
+        apellidos: nuevoUsuario.apellidos,
+        cedula: nuevoUsuario.cedula,
+        cargo: nuevoUsuario.cargo,
+        area: nuevoUsuario.area,
         usuario: nuevoUsuario.usuario,
         rol: nuevoUsuario.rol
       }
@@ -56,7 +112,26 @@ router.post('/', async (req, res) => {
 // Listar usuarios
 router.get('/', async (req, res) => {
   try {
-    const usuarios = await Usuario.find().select('-contrasena');
+    let filtro = {};
+    
+    // Filtrar según rol del usuario
+    if (req.usuario.rol === 'coordinador') {
+      // Coordinador solo ve usuarios de su área (comparar ObjectIds)
+      filtro = {
+        $or: [
+          { area: req.usuario.area, rol: 'profesional' },
+          { _id: req.usuario._id } // También puede verse a sí mismo
+        ]
+      };
+    }
+    // Administradores ven todos los usuarios
+    
+    const usuarios = await Usuario.find(filtro)
+      .select('-contrasena')
+      .populate('creado_por', 'nombre apellidos usuario')
+      .populate('area', 'nombre codigo color')
+      .sort({ createdAt: -1 });
+    
     res.json({
       success: true,
       usuarios
@@ -71,14 +146,48 @@ router.get('/', async (req, res) => {
 });
 
 // Actualizar usuario
-router.put('/:id', async (req, res) => {
+router.put('/:id', esCoordinadorOSuperior, async (req, res) => {
   try {
-    const { usuario, contrasena, rol, activo } = req.body;
-    const updateData = {};
+    const { nombre, apellidos, cedula, cargo, area, usuario, contrasena, rol, activo } = req.body;
+    
+    // Obtener el usuario a actualizar
+    const usuarioAActualizar = await Usuario.findById(req.params.id);
+    
+    if (!usuarioAActualizar) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Usuario no encontrado' 
+      });
+    }
 
+    // Verificar permisos
+    if (req.usuario.rol === 'coordinador') {
+      // Coordinador solo puede actualizar profesionales de su área (comparar ObjectIds)
+      if (usuarioAActualizar.area.toString() !== req.usuario.area.toString() || usuarioAActualizar.rol !== 'profesional') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tienes permisos para actualizar este usuario' 
+        });
+      }
+      
+      // Coordinador no puede cambiar el rol
+      if (rol && rol !== 'profesional') {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No puedes cambiar el rol del usuario' 
+        });
+      }
+    }
+
+    const updateData = {};
+    if (nombre) updateData.nombre = nombre;
+    if (apellidos) updateData.apellidos = apellidos;
+    if (cedula) updateData.cedula = cedula;
+    if (cargo) updateData.cargo = cargo;
+    if (area && req.usuario.rol === 'administrador') updateData.area = area;
     if (usuario) updateData.usuario = usuario;
     if (contrasena) updateData.contrasena = contrasena;
-    if (rol) updateData.rol = rol;
+    if (rol && req.usuario.rol === 'administrador') updateData.rol = rol;
     if (typeof activo !== 'undefined') updateData.activo = activo;
 
     const usuarioActualizado = await Usuario.findByIdAndUpdate(
@@ -86,13 +195,6 @@ router.put('/:id', async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     ).select('-contrasena');
-
-    if (!usuarioActualizado) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'Usuario no encontrado' 
-      });
-    }
 
     res.json({
       success: true,
@@ -109,8 +211,8 @@ router.put('/:id', async (req, res) => {
   }
 });
 
-// Eliminar usuario
-router.delete('/:id', async (req, res) => {
+// Eliminar usuario (solo administrador)
+router.delete('/:id', esAdmin, async (req, res) => {
   try {
     const usuario = await Usuario.findByIdAndDelete(req.params.id);
     

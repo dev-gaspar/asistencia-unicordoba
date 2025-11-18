@@ -185,7 +185,7 @@ const Dashboard = () => {
       <Card shadow="sm" padding="lg" radius="md" withBorder>
         <Title order={3} mb="md">Información del Sistema</Title>
         <Text size="sm" c="dimmed">
-          Sistema de Asistencia a Eventos desarrollado para la Universidad de Córdoba.
+          Sistema de Asistencia a Eventos desarrollado para la Unicordoba.
           Este dashboard proporciona una vista general del estado del sistema y sus componentes principales.
         </Text>
       </Card>

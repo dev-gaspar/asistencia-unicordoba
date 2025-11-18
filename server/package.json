@@ -1,7 +1,7 @@
 {
   "name": "sistema-asistencia-unicordoba",
   "version": "1.0.0",
-  "description": "Sistema de asistencia a eventos - Universidad de Córdoba",
+  "description": "Sistema de asistencia a eventos - Unicordoba",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -23,9 +23,11 @@
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
     "csv-parser": "^3.0.0",
+    "dayjs": "^1.11.10",
     "dotenv": "^16.3.1",
     "exceljs": "^4.4.0",
     "express": "^4.18.2",
+    "html5-qrcode": "^2.3.8",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
     "multer": "^1.4.5-lts.1"

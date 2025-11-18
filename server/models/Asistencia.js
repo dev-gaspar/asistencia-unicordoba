@@ -14,7 +14,7 @@ const asistenciaSchema = new mongoose.Schema({
   dispositivo: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Dispositivo',
-    required: true
+    required: false // Ahora es opcional (manual desde cliente no usa dispositivo)
   },
   fecha_registro: {
     type: Date,
@@ -24,6 +24,16 @@ const asistenciaSchema = new mongoose.Schema({
     type: String,
     required: true,
     uppercase: true
+  },
+  tipo_registro: {
+    type: String,
+    enum: ['dispositivo', 'manual_qr', 'manual_documento'],
+    default: 'dispositivo'
+  },
+  registrado_por: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Usuario',
+    required: false // Solo para registros manuales
   }
 }, {
   timestamps: true

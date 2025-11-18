@@ -14,29 +14,43 @@ import {
   Text,
   Card,
   Loader,
-  Center
+  Center,
+  ScrollArea
 } from '@mantine/core'
 import { useForm } from '@mantine/form'
 import { useDisclosure } from '@mantine/hooks'
 import { modals } from '@mantine/modals'
 import { notifications } from '@mantine/notifications'
 import { IconPlus, IconEdit, IconTrash } from '@tabler/icons-react'
-import { usuariosService } from '../services/api'
+import { usuariosService, areasService } from '../services/api'
+import { useAuth } from '../context/AuthContext'
 
 const Usuarios = () => {
+  const { user } = useAuth()
   const [usuarios, setUsuarios] = useState([])
+  const [areas, setAreas] = useState([])
   const [loading, setLoading] = useState(true)
   const [modalOpened, { open: openModal, close: closeModal }] = useDisclosure(false)
   const [editingUser, setEditingUser] = useState(null)
 
   const form = useForm({
     initialValues: {
+      nombre: '',
+      apellidos: '',
+      cedula: '',
+      cargo: '',
+      area: '',
       usuario: '',
       contrasena: '',
-      rol: 'operador',
+      rol: 'profesional',
       activo: true
     },
     validate: {
+      nombre: (value) => (!value ? 'Nombre es requerido' : null),
+      apellidos: (value) => (!value ? 'Apellidos son requeridos' : null),
+      cedula: (value) => (!value ? 'Cédula es requerida' : null),
+      cargo: (value) => (!value ? 'Cargo es requerido' : null),
+      area: (value) => (!value ? 'Área es requerida' : null),
       usuario: (value) => (!value ? 'Usuario es requerido' : null),
       contrasena: (value) => {
         if (!editingUser && !value) return 'Contraseña es requerida'
@@ -47,6 +61,7 @@ const Usuarios = () => {
 
   useEffect(() => {
     loadUsuarios()
+    loadAreas()
   }, [])
 
   const loadUsuarios = async () => {
@@ -65,18 +80,37 @@ const Usuarios = () => {
     }
   }
 
-  const handleOpenModal = (user = null) => {
-    if (user) {
-      setEditingUser(user)
+  const loadAreas = async () => {
+    try {
+      const data = await areasService.getAll({ activo: true })
+      setAreas(data.areas || [])
+    } catch (error) {
+      console.error('Error al cargar áreas:', error)
+    }
+  }
+
+  const handleOpenModal = (usuario = null) => {
+    if (usuario) {
+      setEditingUser(usuario)
       form.setValues({
-        usuario: user.usuario,
+        nombre: usuario.nombre || '',
+        apellidos: usuario.apellidos || '',
+        cedula: usuario.cedula || '',
+        cargo: usuario.cargo || '',
+        area: usuario.area?._id || usuario.area || '',
+        usuario: usuario.usuario,
         contrasena: '',
-        rol: user.rol,
-        activo: user.activo
+        rol: usuario.rol,
+        activo: usuario.activo
       })
     } else {
       setEditingUser(null)
       form.reset()
+      // Si es coordinador, fijar su área
+      if (user?.rol === 'coordinador' && user?.area?._id) {
+        form.setFieldValue('area', user.area._id)
+        form.setFieldValue('rol', 'profesional')
+      }
     }
     openModal()
   }
@@ -115,19 +149,19 @@ const Usuarios = () => {
     }
   }
 
-  const handleDelete = (user) => {
+  const handleDelete = (usuario) => {
     modals.openConfirmModal({
       title: 'Eliminar Usuario',
       children: (
         <Text size="sm">
-          ¿Estás seguro de que quieres eliminar el usuario <strong>{user.usuario}</strong>?
+          ¿Estás seguro de que quieres eliminar el usuario <strong>{usuario.nombre} {usuario.apellidos}</strong>?
         </Text>
       ),
       labels: { confirm: 'Eliminar', cancel: 'Cancelar' },
       confirmProps: { color: 'red' },
       onConfirm: async () => {
         try {
-          await usuariosService.delete(user._id)
+          await usuariosService.delete(usuario._id)
           notifications.show({
             title: 'Éxito',
             message: 'Usuario eliminado correctamente',
@@ -144,6 +178,48 @@ const Usuarios = () => {
       }
     })
   }
+
+  const getRolBadgeColor = (rol) => {
+    switch (rol) {
+      case 'administrador':
+        return 'red'
+      case 'coordinador':
+        return 'blue'
+      case 'profesional':
+        return 'green'
+      default:
+        return 'gray'
+    }
+  }
+
+  const getRolLabel = (rol) => {
+    switch (rol) {
+      case 'administrador':
+        return 'Administrador'
+      case 'coordinador':
+        return 'Coordinador'
+      case 'profesional':
+        return 'Profesional'
+      default:
+        return rol
+    }
+  }
+
+  const areasOptions = areas.map(area => ({
+    value: area._id,
+    label: area.nombre
+  }))
+
+  const rolesOptions = user?.rol === 'coordinador' 
+    ? [{ value: 'profesional', label: 'Profesional' }]
+    : [
+        { value: 'administrador', label: 'Administrador' },
+        { value: 'coordinador', label: 'Coordinador' },
+        { value: 'profesional', label: 'Profesional' }
+      ]
+
+  const canDelete = user?.rol === 'administrador'
+  const canEditRole = user?.rol === 'administrador'
 
   if (loading) {
     return (
@@ -170,61 +246,124 @@ const Usuarios = () => {
       </Group>
 
       <Card shadow="sm" padding="lg" radius="md" withBorder>
-        <Table striped highlightOnHover>
-          <Table.Thead>
-            <Table.Tr>
-              <Table.Th>Usuario</Table.Th>
-              <Table.Th>Rol</Table.Th>
-              <Table.Th>Estado</Table.Th>
-              <Table.Th>Acciones</Table.Th>
-            </Table.Tr>
-          </Table.Thead>
-          <Table.Tbody>
-            {usuarios.map((user) => (
-              <Table.Tr key={user._id}>
-                <Table.Td>{user.usuario}</Table.Td>
-                <Table.Td>
-                  <Badge color={user.rol === 'admin' ? 'red' : 'blue'} variant="light">
-                    {user.rol}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Badge color={user.activo ? 'green' : 'gray'} variant="light">
-                    {user.activo ? 'Activo' : 'Inactivo'}
-                  </Badge>
-                </Table.Td>
-                <Table.Td>
-                  <Group gap="xs">
-                    <ActionIcon
-                      variant="light"
-                      color="blue"
-                      onClick={() => handleOpenModal(user)}
-                    >
-                      <IconEdit size={16} />
-                    </ActionIcon>
-                    <ActionIcon
-                      variant="light"
-                      color="red"
-                      onClick={() => handleDelete(user)}
-                    >
-                      <IconTrash size={16} />
-                    </ActionIcon>
-                  </Group>
-                </Table.Td>
+        <ScrollArea>
+          <Table striped highlightOnHover>
+            <Table.Thead>
+              <Table.Tr>
+                <Table.Th style={{ minWidth: 200 }}>Nombre Completo</Table.Th>
+                <Table.Th style={{ minWidth: 120 }}>Cédula</Table.Th>
+                <Table.Th style={{ minWidth: 120 }}>Usuario</Table.Th>
+                <Table.Th style={{ minWidth: 150 }}>Cargo</Table.Th>
+                <Table.Th style={{ minWidth: 130 }}>Área</Table.Th>
+                <Table.Th style={{ minWidth: 120 }}>Rol</Table.Th>
+                <Table.Th style={{ minWidth: 100 }}>Estado</Table.Th>
+                <Table.Th style={{ minWidth: 120 }}>Acciones</Table.Th>
               </Table.Tr>
-            ))}
-          </Table.Tbody>
-        </Table>
+            </Table.Thead>
+            <Table.Tbody>
+              {usuarios.map((usuario) => (
+                <Table.Tr key={usuario._id}>
+                  <Table.Td>
+                    <Text fw={500}>{usuario.nombre} {usuario.apellidos}</Text>
+                  </Table.Td>
+                  <Table.Td>{usuario.cedula}</Table.Td>
+                  <Table.Td>{usuario.usuario}</Table.Td>
+                  <Table.Td>{usuario.cargo}</Table.Td>
+                  <Table.Td>
+                    <Badge 
+                      color={usuario.area?.color || 'cyan'} 
+                      variant="light"
+                      style={{ backgroundColor: usuario.area?.color ? `${usuario.area.color}15` : undefined }}
+                    >
+                      {usuario.area?.nombre || usuario.area}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={getRolBadgeColor(usuario.rol)} variant="light">
+                      {getRolLabel(usuario.rol)}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Badge color={usuario.activo ? 'green' : 'gray'} variant="light">
+                      {usuario.activo ? 'Activo' : 'Inactivo'}
+                    </Badge>
+                  </Table.Td>
+                  <Table.Td>
+                    <Group gap="xs">
+                      <ActionIcon
+                        variant="light"
+                        color="blue"
+                        onClick={() => handleOpenModal(usuario)}
+                      >
+                        <IconEdit size={16} />
+                      </ActionIcon>
+                      {canDelete && (
+                        <ActionIcon
+                          variant="light"
+                          color="red"
+                          onClick={() => handleDelete(usuario)}
+                        >
+                          <IconTrash size={16} />
+                        </ActionIcon>
+                      )}
+                    </Group>
+                  </Table.Td>
+                </Table.Tr>
+              ))}
+            </Table.Tbody>
+          </Table>
+        </ScrollArea>
       </Card>
 
       <Modal
         opened={modalOpened}
         onClose={closeModal}
         title={editingUser ? 'Editar Usuario' : 'Nuevo Usuario'}
-        size="md"
+        size="lg"
       >
         <form onSubmit={form.onSubmit(handleSubmit)}>
           <Stack>
+            <Group grow>
+              <TextInput
+                label="Nombre"
+                placeholder="Nombre"
+                {...form.getInputProps('nombre')}
+                required
+              />
+
+              <TextInput
+                label="Apellidos"
+                placeholder="Apellidos"
+                {...form.getInputProps('apellidos')}
+                required
+              />
+            </Group>
+
+            <Group grow>
+              <TextInput
+                label="Cédula"
+                placeholder="Número de cédula"
+                {...form.getInputProps('cedula')}
+                required
+                disabled={editingUser} // No se puede cambiar la cédula al editar
+              />
+
+              <TextInput
+                label="Cargo"
+                placeholder="Cargo del usuario"
+                {...form.getInputProps('cargo')}
+                required
+              />
+            </Group>
+
+            <Select
+              label="Área de Bienestar"
+              data={areasOptions}
+              {...form.getInputProps('area')}
+              required
+              disabled={user?.rol === 'coordinador'} // Coordinador no puede cambiar el área
+            />
+
             <TextInput
               label="Usuario"
               placeholder="Nombre de usuario"
@@ -242,12 +381,10 @@ const Usuarios = () => {
 
             <Select
               label="Rol"
-              data={[
-                { value: 'admin', label: 'Administrador' },
-                { value: 'operador', label: 'Operador' }
-              ]}
+              data={rolesOptions}
               {...form.getInputProps('rol')}
               required
+              disabled={!canEditRole} // Solo admin puede cambiar rol
             />
 
             <Switch

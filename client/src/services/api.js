@@ -85,9 +85,12 @@ export const eventosService = {
   getAll: (params) => api.get('/eventos', { params }),
   getById: (id) => api.get(`/eventos/${id}`),
   getByDispositivo: (codigo) => api.get(`/eventos/dispositivo/${codigo}`),
+  getProfesionales: () => api.get('/eventos/filtros/profesionales'),
   create: (data) => api.post('/eventos', data),
   update: (id, data) => api.put(`/eventos/${id}`, data),
-  delete: (id) => api.delete(`/eventos/${id}`)
+  delete: (id) => api.delete(`/eventos/${id}`),
+  addFoto: (id, data) => api.post(`/eventos/${id}/fotos`, data),
+  deleteFoto: (id, fotoId) => api.delete(`/eventos/${id}/fotos/${fotoId}`)
 }
 
 // Asistencia Service
@@ -95,6 +98,9 @@ export const asistenciaService = {
   getByEvento: (eventoId) => api.get(`/asistencia/evento/${eventoId}`),
   getEstadisticas: (eventoId) => api.get(`/asistencia/evento/${eventoId}/estadisticas`),
   getByEstudiante: (estudianteId) => api.get(`/asistencia/estudiante/${estudianteId}`),
+  getEventosActivos: () => api.get('/asistencia/eventos-activos'),
+  registrarManual: (data) => api.post('/asistencia/registrar-manual', data),
+  registrarQR: (data) => api.post('/asistencia/registrar-qr', data),
   delete: (id) => api.delete(`/asistencia/${id}`),
   exportarExcel: async (eventoId) => {
     const token = localStorage.getItem('token')
@@ -124,6 +130,15 @@ export const uploadService = {
     })
   },
   deleteImage: (filename) => api.delete(`/upload/${filename}`)
+}
+
+// Areas Service
+export const areasService = {
+  getAll: (params) => api.get('/areas', { params }),
+  getById: (id) => api.get(`/areas/${id}`),
+  create: (data) => api.post('/areas', data),
+  update: (id, data) => api.put(`/areas/${id}`, data),
+  delete: (id) => api.delete(`/areas/${id}`)
 }
 
 export default api

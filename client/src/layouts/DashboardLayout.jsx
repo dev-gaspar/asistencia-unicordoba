@@ -24,7 +24,9 @@ import {
   IconClipboardList,
   IconLogout,
   IconUser,
-  IconChevronDown
+  IconChevronDown,
+  IconPalette,
+  IconQrcode
 } from '@tabler/icons-react'
 import { useAuth } from '../context/AuthContext'
 import logo from '../assets/logo.png'
@@ -38,10 +40,12 @@ const DashboardLayout = () => {
   const navItems = [
     { label: 'Dashboard', icon: IconDashboard, path: '/' },
     { label: 'Usuarios', icon: IconUsers, path: '/usuarios', adminOnly: true },
+    { label: 'Áreas', icon: IconPalette, path: '/areas', adminOnly: true },
     { label: 'Estudiantes', icon: IconSchool, path: '/estudiantes' },
     { label: 'Dispositivos', icon: IconDeviceDesktop, path: '/dispositivos' },
     { label: 'Eventos', icon: IconCalendarEvent, path: '/eventos' },
-    { label: 'Asistencias', icon: IconClipboardList, path: '/asistencias' }
+    { label: 'Asistencias', icon: IconClipboardList, path: '/asistencias' },
+    { label: 'Escanear QR', icon: IconQrcode, path: '/escanear-qr' }
   ]
 
   const handleLogout = () => {
@@ -50,7 +54,7 @@ const DashboardLayout = () => {
   }
 
   const filteredNavItems = navItems.filter(
-    item => !item.adminOnly || user?.rol === 'admin'
+    item => !item.adminOnly || user?.rol === 'administrador'
   )
 
   return (
@@ -75,13 +79,13 @@ const DashboardLayout = () => {
             <Group gap="sm">
               <Image
                 src={logo}
-                alt="Universidad de Córdoba"
+                alt="Unicordoba"
                 h={50}
                 w="auto"
               />
               <div>
                 <Title order={4} c="green.7">
-                  Universidad de Córdoba
+                  Unicordoba
                 </Title>
                 <Text size="xs" c="dimmed">
                   Sistema de Asistencia
@@ -93,24 +97,29 @@ const DashboardLayout = () => {
           <Menu shadow="md" width={200}>
             <Menu.Target>
               <UnstyledButton>
-                <Group gap="xs">
-                  <Avatar color="green" radius="xl">
-                    <IconUser size={20} />
+                <Group gap="xs" wrap="nowrap">
+                  <Avatar color="green" radius="xl" size="sm">
+                    <IconUser size={16} />
                   </Avatar>
-                  <div style={{ flex: 1 }}>
-                    <Text size="sm" fw={500}>
+                  <Box visibleFrom="sm" style={{ minWidth: 0 }}>
+                    <Text size="sm" fw={500} lineClamp={1}>
                       {user?.usuario}
                     </Text>
-                    <Text size="xs" c="dimmed">
+                    <Text size="xs" c="dimmed" lineClamp={1}>
                       {user?.rol}
                     </Text>
-                  </div>
-                  <IconChevronDown size={16} />
+                  </Box>
+                  <IconChevronDown size={14} style={{ flexShrink: 0 }} />
                 </Group>
               </UnstyledButton>
             </Menu.Target>
 
             <Menu.Dropdown>
+              <Menu.Label>
+                <Text size="xs" fw={500}>{user?.usuario}</Text>
+                <Text size="xs" c="dimmed">{user?.rol}</Text>
+              </Menu.Label>
+              <Menu.Divider />
               <Menu.Item
                 leftSection={<IconLogout style={{ width: rem(14), height: rem(14) }} />}
                 onClick={handleLogout}
@@ -131,7 +140,10 @@ const DashboardLayout = () => {
               label={item.label}
               leftSection={<item.icon size={20} stroke={1.5} />}
               active={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
+              onClick={() => {
+                navigate(item.path)
+                toggle() // Cerrar el menú en móviles después de navegar
+              }}
               variant="filled"
               color="green"
               style={{ borderRadius: '8px', marginBottom: '4px' }}

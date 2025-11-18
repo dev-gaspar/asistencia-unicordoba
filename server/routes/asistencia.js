@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const dayjs = require('dayjs');
 const ExcelJS = require('exceljs');
 const Asistencia = require('../models/Asistencia');
 const Estudiante = require('../models/Estudiante');
@@ -56,8 +57,17 @@ router.post('/registrar', async (req, res) => {
     if (!estudiante) {
       return res.status(404).json({ 
         success: false, 
-        message: 'Estudiante no encontrado',
-        codigo_carnet: payload
+        message: 'Estudiante no existe o no está matriculado en este periodo',
+        codigo_carnet: payload,
+        periodo: evento.periodo
+      });
+    }
+
+    // Verificar si el evento ha finalizado
+    if (evento.finalizado) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Este evento ya ha finalizado y no acepta más asistencias'
       });
     }
 
@@ -70,7 +80,7 @@ router.post('/registrar', async (req, res) => {
     if (asistenciaExistente) {
       return res.status(400).json({ 
         success: false, 
-        message: 'Asistencia ya registrada para este estudiante en este evento',
+        message: 'Este estudiante ya está registrado en este evento',
         estudiante: {
           nombre: estudiante.nombre,
           codigo_carnet: estudiante.codigo_carnet
@@ -125,6 +135,301 @@ router.post('/registrar', async (req, res) => {
 
 // Las siguientes rutas requieren autenticación
 router.use(verificarToken);
+
+// Registrar asistencia escaneando QR desde cliente
+router.post('/registrar-qr', async (req, res) => {
+  try {
+    const { evento_id, codigo_carnet } = req.body;
+
+    if (!evento_id || !codigo_carnet) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Evento y código de carnet son requeridos' 
+      });
+    }
+
+    // Buscar evento
+    const evento = await Evento.findById(evento_id);
+    
+    if (!evento) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Evento no encontrado' 
+      });
+    }
+
+    // Verificar permisos (solo puede tomar asistencia el creador del evento, coordinador de su área o admin)
+    if (req.usuario.rol === 'profesional' && evento.creado_por.toString() !== req.usuario._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'No tienes permisos para tomar asistencia en este evento' 
+      });
+    }
+
+    if (req.usuario.rol === 'coordinador') {
+      const eventoAreaId = evento.area._id ? evento.area._id.toString() : evento.area.toString();
+      if (eventoAreaId !== req.usuario.area.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tienes permisos para tomar asistencia en eventos de otra área' 
+        });
+      }
+    }
+
+    // Verificar si el evento está activo y no finalizado
+    if (!evento.activo || evento.finalizado) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Este evento no está activo o ya ha finalizado' 
+      });
+    }
+
+    // Buscar estudiante por código de carnet del mismo periodo del evento
+    const estudiante = await Estudiante.findOne({ 
+      codigo_carnet: codigo_carnet.toUpperCase(),
+      periodo: evento.periodo,
+      activo: true
+    });
+    
+    if (!estudiante) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Estudiante no existe, no está matriculado en este periodo o carnet inválido',
+        codigo_carnet: codigo_carnet,
+        periodo: evento.periodo
+      });
+    }
+
+    // Verificar si ya existe asistencia para este estudiante en este evento
+    const asistenciaExistente = await Asistencia.findOne({ 
+      evento: evento_id, 
+      estudiante: estudiante._id 
+    });
+    
+    if (asistenciaExistente) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Este estudiante ya tiene asistencia registrada en este evento',
+        estudiante: {
+          nombre: estudiante.nombre,
+          codigo: estudiante.codigo_carnet
+        },
+        fecha_registro: asistenciaExistente.fecha_registro
+      });
+    }
+
+    // Crear registro de asistencia
+    const nuevaAsistencia = new Asistencia({
+      evento: evento_id,
+      estudiante: estudiante._id,
+      codigo_carnet_escaneado: codigo_carnet.toUpperCase(),
+      tipo_registro: 'manual_qr',
+      registrado_por: req.usuario._id,
+      fecha_registro: dayjs().toDate()
+    });
+
+    await nuevaAsistencia.save();
+
+    // Poblar información del estudiante para la respuesta
+    await nuevaAsistencia.populate('estudiante');
+    await nuevaAsistencia.populate('registrado_por', 'nombre apellidos usuario');
+
+    res.json({ 
+      success: true, 
+      message: 'Asistencia registrada exitosamente',
+      asistencia: nuevaAsistencia,
+      estudiante: {
+        nombre: estudiante.nombre,
+        codigo: estudiante.codigo_carnet,
+        identificacion: estudiante.identificacion
+      }
+    });
+
+  } catch (error) {
+    console.error('Error al registrar asistencia QR:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al registrar asistencia', 
+      error: error.message 
+    });
+  }
+});
+
+// Registrar asistencia manual (por documento)
+router.post('/registrar-manual', async (req, res) => {
+  try {
+    const { evento_id, identificacion } = req.body;
+
+    if (!evento_id || !identificacion) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Evento e identificación son requeridos' 
+      });
+    }
+
+    // Buscar evento
+    const evento = await Evento.findById(evento_id);
+    
+    if (!evento) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Evento no encontrado' 
+      });
+    }
+
+    // Verificar permisos (solo puede tomar asistencia el creador del evento, coordinador de su área o admin)
+    if (req.usuario.rol === 'profesional' && evento.creado_por.toString() !== req.usuario._id.toString()) {
+      return res.status(403).json({ 
+        success: false, 
+        message: 'No tienes permisos para tomar asistencia en este evento' 
+      });
+    }
+
+    if (req.usuario.rol === 'coordinador') {
+      const eventoAreaId = evento.area._id ? evento.area._id.toString() : evento.area.toString();
+      if (eventoAreaId !== req.usuario.area.toString()) {
+        return res.status(403).json({ 
+          success: false, 
+          message: 'No tienes permisos para tomar asistencia en eventos de otra área' 
+        });
+      }
+    }
+
+    // Verificar si el evento está activo y no finalizado
+    if (!evento.activo || evento.finalizado) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Este evento no está activo o ya ha finalizado' 
+      });
+    }
+
+    // Buscar estudiante por identificación del mismo periodo del evento
+    const estudiante = await Estudiante.findOne({ 
+      identificacion: identificacion.toString(),
+      periodo: evento.periodo,
+      activo: true
+    });
+    
+    if (!estudiante) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Estudiante no existe o no está matriculado en este periodo',
+        identificacion: identificacion,
+        periodo: evento.periodo
+      });
+    }
+
+    // Verificar si ya registró asistencia
+    const asistenciaExistente = await Asistencia.findOne({
+      evento: evento._id,
+      estudiante: estudiante._id
+    });
+
+    if (asistenciaExistente) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Este estudiante ya está registrado en este evento',
+        estudiante: {
+          nombre: estudiante.nombre,
+          codigo_carnet: estudiante.codigo_carnet,
+          identificacion: estudiante.identificacion
+        },
+        fecha_registro_anterior: asistenciaExistente.fecha_registro
+      });
+    }
+
+    // Registrar asistencia
+    const asistencia = new Asistencia({
+      evento: evento._id,
+      estudiante: estudiante._id,
+      dispositivo: evento.dispositivo,
+      codigo_carnet_escaneado: estudiante.codigo_carnet,
+      tipo_registro: 'manual_documento',
+      registrado_por: req.usuario._id
+    });
+
+    await asistencia.save();
+    await asistencia.populate(['evento', 'estudiante', 'dispositivo']);
+
+    console.log('✅ Asistencia manual registrada:');
+    console.log(`   Estudiante: ${estudiante.nombre}`);
+    console.log(`   Evento: ${evento.nombre}`);
+    console.log(`   Registrado por: ${req.usuario.usuario}`);
+
+    res.json({
+      success: true,
+      message: 'Asistencia registrada exitosamente',
+      asistencia: {
+        id: asistencia._id,
+        estudiante: {
+          nombre: estudiante.nombre,
+          codigo_carnet: estudiante.codigo_carnet,
+          identificacion: estudiante.identificacion,
+          email: estudiante.email
+        },
+        evento: {
+          nombre: evento.nombre,
+          fecha: evento.fecha
+        },
+        fecha_registro: asistencia.fecha_registro
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error al registrar asistencia manual:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al registrar asistencia', 
+      error: error.message 
+    });
+  }
+});
+
+// Obtener eventos activos para tomar asistencia
+router.get('/eventos-activos', async (req, res) => {
+  try {
+    // Finalizar automáticamente eventos que ya pasaron (operación concurrente)
+    const ahora = dayjs().toDate();
+    await Evento.updateMany(
+      {
+        fecha_hora_fin: { $lt: ahora },
+        finalizado: false
+      },
+      {
+        $set: { finalizado: true }
+      }
+    ).exec().catch(err => console.error('Error al finalizar eventos:', err));
+    
+    let filtro = {
+      activo: true,
+      finalizado: false
+    };
+    
+    // Filtrar según rol del usuario
+    if (req.usuario.rol === 'profesional') {
+      filtro.creado_por = req.usuario._id;
+    } else if (req.usuario.rol === 'coordinador') {
+      filtro.area = req.usuario.area;
+    }
+    
+    const eventos = await Evento.find(filtro)
+      .populate('dispositivo')
+      .populate('creado_por', 'nombre apellidos usuario')
+      .sort({ fecha: -1, hora_inicio: -1 });
+
+    res.json({
+      success: true,
+      count: eventos.length,
+      eventos
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Error al obtener eventos activos', 
+      error: error.message 
+    });
+  }
+});
 
 // Obtener asistencias de un evento
 router.get('/evento/:eventoId', async (req, res) => {
@@ -302,7 +607,7 @@ router.get('/evento/:eventoId/exportar', async (req, res) => {
     });
 
     // Configurar respuesta
-    const filename = `asistencias_${evento.nombre.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.xlsx`;
+    const filename = `asistencias_${evento.nombre.replace(/\s+/g, '_')}_${dayjs().format('YYYY-MM-DD')}.xlsx`;
     
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
