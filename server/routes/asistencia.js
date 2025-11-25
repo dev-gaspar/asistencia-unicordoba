@@ -410,20 +410,6 @@ router.post("/registrar-manual", async (req, res) => {
 // Obtener eventos activos para tomar asistencia
 router.get("/eventos-activos", async (req, res) => {
 	try {
-		// Finalizar automáticamente eventos que ya pasaron (operación concurrente)
-		const ahora = new Date();
-		await Evento.updateMany(
-			{
-				fecha_hora_fin: { $lt: ahora },
-				finalizado: false,
-			},
-			{
-				$set: { finalizado: true },
-			}
-		)
-			.exec()
-			.catch((err) => console.error("Error al finalizar eventos:", err));
-
 		let filtro = {
 			activo: true,
 			finalizado: false,

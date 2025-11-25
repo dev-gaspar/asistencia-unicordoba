@@ -4,6 +4,7 @@ const path = require("path");
 const cors = require("cors");
 const dayjs = require("dayjs");
 const connectDB = require("./config/database");
+const { iniciarWorker } = require("./workers/finalizarEventos");
 
 // Importar rutas
 const authRoutes = require("./routes/auth");
@@ -20,6 +21,9 @@ const PORT = process.env.PORT || 3000;
 
 // Conectar a MongoDB
 connectDB();
+
+// Iniciar worker de finalización de eventos
+iniciarWorker();
 
 // Configuración de CORS
 const corsOptions = {

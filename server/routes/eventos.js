@@ -142,20 +142,6 @@ router.get("/", async (req, res) => {
 			profesional,
 		} = req.query;
 
-		// Finalizar automáticamente eventos que ya pasaron (operación concurrente)
-		const ahora = dayjs().toDate();
-		await Evento.updateMany(
-			{
-				fecha_hora_fin: { $lt: ahora },
-				finalizado: false,
-			},
-			{
-				$set: { finalizado: true },
-			}
-		)
-			.exec()
-			.catch((err) => console.error("Error al finalizar eventos:", err));
-
 		let filtro = {};
 
 		// Filtrar según rol del usuario
