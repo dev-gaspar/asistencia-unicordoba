@@ -36,7 +36,7 @@ const Asistencias = () => {
   useEffect(() => {
     if (selectedEvento) {
       loadAsistencias(true) // Mostrar loader en carga inicial
-      
+
       // Actualizar asistencias cada 2 segundos sin loader
       const interval = setInterval(() => {
         loadAsistencias(false) // No mostrar loader en actualizaciones automáticas
@@ -97,13 +97,13 @@ const Asistencias = () => {
         evento_id: selectedEvento,
         identificacion: identificacionManual
       })
-      
+
       notifications.show({
         title: 'Éxito',
         message: 'Asistencia registrada correctamente',
         color: 'green'
       })
-      
+
       setIdentificacionManual('')
       loadAsistencias(false) // Recargar asistencias sin loader
     } catch (error) {
@@ -161,7 +161,7 @@ const Asistencias = () => {
             <Text size="sm" c="dimmed" mb="md">
               Registra la asistencia ingresando el número de documento del estudiante
             </Text>
-            
+
             <Group>
               <TextInput
                 placeholder="Número de cédula del estudiante"
@@ -175,7 +175,7 @@ const Asistencias = () => {
                   }
                 }}
               />
-              <Button 
+              <Button
                 onClick={handleRegistrarAsistenciaManual}
                 loading={registrandoAsistencia}
                 color="green"
@@ -218,7 +218,6 @@ const Asistencias = () => {
                       <Table.Th style={{ minWidth: 120 }}>Identificación</Table.Th>
                       <Table.Th style={{ minWidth: 200 }}>Email</Table.Th>
                       <Table.Th style={{ minWidth: 150 }}>Fecha Registro</Table.Th>
-                      <Table.Th style={{ minWidth: 100 }}>Dispositivo</Table.Th>
                     </Table.Tr>
                   </Table.Thead>
                   <Table.Tbody>
@@ -243,11 +242,6 @@ const Asistencias = () => {
                           <Text size="xs">
                             {dayjs(asistencia.fecha_registro).format('DD/MM/YYYY HH:mm:ss')}
                           </Text>
-                        </Table.Td>
-                        <Table.Td>
-                          <Badge variant="light" color="grape" size="sm">
-                            {asistencia.dispositivo?.codigo}
-                          </Badge>
                         </Table.Td>
                       </Table.Tr>
                     ))}
