@@ -411,7 +411,7 @@ router.post("/registrar-manual", async (req, res) => {
 router.get("/eventos-activos", async (req, res) => {
 	try {
 		// Finalizar automáticamente eventos que ya pasaron (operación concurrente)
-		const ahora = dayjs().tz(COLOMBIA_TZ).toDate();
+		const ahora = new Date();
 		await Evento.updateMany(
 			{
 				fecha_hora_fin: { $lt: ahora },
